@@ -1,194 +1,84 @@
-/* ── RESET & BASE ───────────────────────────────────── */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* ── RESET ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
-  background: #f4f4f5;
-  color: #1a1a1a;
-}
-
-/* ── LAYOUT ─────────────────────────────────────────── */
-#app {
-  display: flex;
-  height: 100vh;
   overflow: hidden;
 }
 
-#sidebar {
-  width: 300px;
-  min-width: 300px;
-  height: 100vh;
-  overflow-y: auto;
-  background: #ffffff;
-  border-right: 1px solid #e4e4e7;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
-}
-
+/* ── MAP ─────────────────────────────────────────────── */
 #map {
-  flex: 1;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
   height: 100vh;
+  z-index: 0;
 }
 
-/* ── SIDEBAR HEADER ─────────────────────────────────── */
-#sidebar-header h1 {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
+/* ── DARK OVERLAY ────────────────────────────────────── */
+#map-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  z-index: 10;
+  pointer-events: none;
+  transition: background 0.35s ease, backdrop-filter 0.35s ease;
 }
 
-#sidebar-header .subtitle {
-  font-size: 12px;
-  color: #71717a;
-  margin-top: 3px;
+#map-overlay.active {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  pointer-events: all;
 }
 
-/* ── FORM ELEMENTS ──────────────────────────────────── */
-.form-section {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #52525b;
-}
-
-.optional {
-  font-weight: 400;
-  color: #a1a1aa;
-}
-
-input[type="text"] {
-  padding: 7px 10px;
-  border: 1px solid #d4d4d8;
-  border-radius: 7px;
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.15s;
-  background: #fafafa;
-}
-
-input[type="text"]:focus {
-  border-color: #71717a;
-  background: #fff;
-}
-
-input[type="file"] {
-  font-size: 12px;
-  color: #52525b;
-}
-
-/* ── BUTTONS ────────────────────────────────────────── */
-button {
-  padding: 8px 12px;
-  border-radius: 7px;
-  border: 1px solid #d4d4d8;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: inherit;
-  transition: background 0.15s, border-color 0.15s;
-  text-align: left;
-}
-
-button:hover {
-  background: #f4f4f5;
-}
-
-#locate-btn {
-  background: #f4f4f5;
-  border-color: #d4d4d8;
-  color: #3f3f46;
-}
-
-#locate-btn:hover {
-  background: #e4e4e7;
-}
-
-#submit-btn {
-  background: #18181b;
-  color: #ffffff;
-  border-color: #18181b;
-  text-align: center;
-  font-weight: 500;
-  padding: 10px;
-  margin-top: 4px;
-}
-
-#submit-btn:hover {
-  background: #3f3f46;
-  border-color: #3f3f46;
-}
-
-/* ── HINTS & STATUS ─────────────────────────────────── */
-.hint {
-  font-size: 11px;
-  color: #a1a1aa;
-}
-
-#location-display {
-  font-size: 12px;
-  color: #52525b;
-  background: #f4f4f5;
-  border-radius: 6px;
-  padding: 5px 8px;
-  min-height: 28px;
-}
-
-#status-msg {
-  font-size: 12px;
-  min-height: 18px;
-  padding: 2px 0;
-}
-
-/* ── LEADERBOARD ────────────────────────────────────── */
+/* ── LEADERBOARD ─────────────────────────────────────── */
 #leaderboard {
-  border-top: 1px solid #e4e4e7;
-  padding-top: 1rem;
-  margin-top: auto;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  padding: 12px 14px;
+  min-width: 200px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
 #leaderboard h2 {
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 8px;
   color: #3f3f46;
+  margin-bottom: 8px;
 }
 
 #leaderboard-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 #leaderboard-list li {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 6px;
   font-size: 12px;
-  background: #f4f4f5;
-  border-radius: 6px;
-  padding: 6px 10px;
+  padding: 4px 0;
 }
 
+#leaderboard-list li .lb-rank { font-size: 14px; }
+
 #leaderboard-list li .lb-name {
+  flex: 1;
   font-weight: 500;
   color: #18181b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
 }
 
 #leaderboard-list li .lb-score {
@@ -197,34 +87,292 @@ button:hover {
   white-space: nowrap;
 }
 
-#leaderboard-list li.loading {
-  color: #a1a1aa;
+#leaderboard-list li.loading { color: #a1a1aa; }
+
+/* ── FAB BUTTON ──────────────────────────────────────── */
+#fab-submit {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background: #18181b;
+  color: #fff;
+  border: none;
+  border-radius: 100px;
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s;
+  white-space: nowrap;
+}
+
+#fab-submit:hover {
+  background: #3f3f46;
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+}
+
+#fab-submit:active {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── LOCATION HINT BAR ───────────────────────────────── */
+#location-hint {
+  display: none;
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(8px);
+  border: 1px solid #e4e4e7;
+  border-radius: 100px;
+  padding: 10px 16px;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  white-space: nowrap;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 90vw;
+}
+
+#location-instruction {
+  font-size: 13px;
+  color: #3f3f46;
+}
+
+.hint-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── STEP CARDS ──────────────────────────────────────── */
+.step-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px;
+  width: 340px;
+  max-width: 90vw;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid #e4e4e7;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.step-card.pop-in {
+  animation: popIn 0.2s ease forwards;
+}
+
+.step-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.step-icon {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.step-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.step-header p {
+  font-size: 13px;
+  color: #71717a;
+}
+
+/* ── INPUTS ──────────────────────────────────────────── */
+input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #d4d4d8;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  background: #fafafa;
+  color: #18181b;
+}
+
+input[type="text"]:focus {
+  border-color: #18181b;
+  background: #fff;
+}
+
+/* ── STEP ERRORS ─────────────────────────────────────── */
+.step-error {
+  display: none;
+  font-size: 12px;
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 7px;
+  padding: 6px 10px;
+  border: 1px solid #fecaca;
+}
+
+/* ── BUTTONS ─────────────────────────────────────────── */
+.step-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: #18181b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover { background: #3f3f46; }
+.btn-primary:disabled { background: #a1a1aa; cursor: not-allowed; }
+
+.btn-secondary {
+  background: #f4f4f5;
+  color: #3f3f46;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover { background: #e4e4e7; }
+
+.btn-ghost {
+  background: transparent;
+  color: #71717a;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.btn-ghost:hover { color: #18181b; }
+
+/* ── CAMERA STEP ─────────────────────────────────────── */
+.camera-buttons {
+  display: flex;
+  gap: 8px;
   justify-content: center;
 }
 
-/* ── LEAFLET POPUP OVERRIDE ─────────────────────────── */
+#photo-preview-wrap,
+#confirm-photo-wrap {
+  display: none;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e4e4e7;
+}
+
+#photo-preview,
+#confirm-photo {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── CONFIRM STEP ────────────────────────────────────── */
+.confirm-details {
+  background: #f4f4f5;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.confirm-label {
+  font-size: 12px;
+  color: #71717a;
+  white-space: nowrap;
+}
+
+.confirm-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #18181b;
+  text-align: right;
+  word-break: break-all;
+}
+
+/* ── TOAST ───────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: #18181b;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  white-space: nowrap;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── LEAFLET POPUP ───────────────────────────────────── */
 .leaflet-popup-content {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 13px;
   line-height: 1.5;
 }
 
-.leaflet-popup-content img {
-  max-width: 160px;
-  border-radius: 6px;
-  margin-top: 6px;
-  display: block;
-}
-
-/* ── RESPONSIVE (narrow screens) ───────────────────── */
-@media (max-width: 600px) {
-  #app { flex-direction: column; }
-  #sidebar {
-    width: 100%;
-    height: auto;
-    max-height: 45vh;
-    border-right: none;
-    border-bottom: 1px solid #e4e4e7;
-  }
-  #map { height: 55vh; }
+/* ── RESPONSIVE ──────────────────────────────────────── */
+@media (max-width: 480px) {
+  .step-card { padding: 20px; width: 92vw; }
+  #leaderboard { max-width: 160px; }
+  #fab-submit { font-size: 14px; padding: 12px 22px; }
 }

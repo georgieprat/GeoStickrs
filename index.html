@@ -9,103 +9,130 @@
 </head>
 <body>
 
-  <!-- MAP (full screen) -->
-  <div id="map"></div>
-
-  <!-- DARK OVERLAY over map during flow -->
-  <div id="map-overlay"></div>
-
-  <!-- LOCATION HINT (shown only during location step) -->
-  <div id="location-hint">
-    <span id="location-instruction">Click on the map to place your sticker</span>
-    <div class="hint-buttons">
-      <button id="btn-location-back" class="btn-secondary">← Back</button>
-      <button id="btn-location-next" class="btn-primary" disabled>Continue →</button>
+  <!-- ── LOBBY SCREEN (shown first) ───────────────── -->
+  <div id="lobby-screen">
+    <div id="lobby-card">
+      <div class="step-icon">📍</div>
+      <h1>GeoStickrs</h1>
+      <p class="lobby-subtitle">Enter your lobby password to continue</p>
+      <input type="password" id="lobby-password" placeholder="Lobby password" autocomplete="off">
+      <p id="lobby-error" class="step-error"></p>
+      <button id="btn-lobby-join" class="btn-primary">Join lobby →</button>
     </div>
   </div>
 
-  <!-- LEADERBOARD (top left) -->
-  <div id="leaderboard">
-    <h2>🏆 Top spots</h2>
-    <ul id="leaderboard-list">
-      <li class="loading">Loading…</li>
-    </ul>
-  </div>
+  <!-- ── MAIN APP (hidden until lobby joined) ─────── -->
+  <div id="app" style="display:none;">
 
-  <!-- FAB: main submit button (bottom center) -->
-  <button id="fab-submit">＋ Post a sticker</button>
+    <!-- MAP -->
+    <div id="map"></div>
 
-  <!-- ── STEP MODALS ─────────────────────────────── -->
+    <!-- DARK OVERLAY -->
+    <div id="map-overlay"></div>
 
-  <!-- Step 1: Username -->
-  <div id="step-username" class="step-card" style="display:none;">
-    <div class="step-header">
-      <span class="step-icon">👤</span>
-      <h2>Who are you?</h2>
-      <p>Enter a username to track your stickers</p>
-    </div>
-    <input type="text" id="input-username" placeholder="Your username" autocomplete="off">
-    <p id="step-username-error" class="step-error"></p>
-    <div class="step-actions">
-      <button id="btn-username-cancel" class="btn-secondary">Cancel</button>
-      <button id="btn-username-next" class="btn-primary">Continue →</button>
-    </div>
-  </div>
-
-  <!-- Step 2: Location (handled by location-hint bar above) -->
-
-  <!-- Step 3: Camera / Photo -->
-  <div id="step-camera" class="step-card" style="display:none;">
-    <div class="step-header">
-      <span class="step-icon">📸</span>
-      <h2>Add a photo</h2>
-      <p>Show us where you put the sticker!</p>
-    </div>
-    <div id="photo-preview-wrap" style="display:none;">
-      <img id="photo-preview" alt="Preview">
-    </div>
-    <div class="camera-buttons">
-      <button id="btn-camera-take" class="btn-secondary">📷 Take photo</button>
-      <button id="btn-camera-upload" class="btn-secondary">🖼 Upload image</button>
-    </div>
-    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
-    <input type="file" id="file-input" accept="image/*" style="display:none;">
-    <p id="step-camera-error" class="step-error"></p>
-    <div class="step-actions">
-      <button id="btn-camera-back" class="btn-secondary">← Back</button>
-      <button id="btn-camera-skip" class="btn-ghost">Skip</button>
-      <button id="btn-camera-next" class="btn-primary" disabled>Continue →</button>
-    </div>
-  </div>
-
-  <!-- Step 4: Confirm -->
-  <div id="step-confirm" class="step-card" style="display:none;">
-    <div class="step-header">
-      <span class="step-icon">✅</span>
-      <h2>Confirm submission</h2>
-      <p>Ready to post your sticker?</p>
-    </div>
-    <div class="confirm-details">
-      <div class="confirm-row">
-        <span class="confirm-label">👤 User</span>
-        <span id="confirm-username" class="confirm-value"></span>
-      </div>
-      <div class="confirm-row">
-        <span class="confirm-label">📍 Location</span>
-        <span id="confirm-location" class="confirm-value"></span>
+    <!-- LOCATION HINT BAR -->
+    <div id="location-hint">
+      <span id="location-instruction">Click on the map to place your sticker</span>
+      <div class="hint-buttons">
+        <button id="btn-location-back" class="btn-secondary">← Back</button>
+        <button id="btn-location-next" class="btn-primary" disabled>Continue →</button>
       </div>
     </div>
-    <div id="confirm-photo-wrap" style="display:none;">
-      <img id="confirm-photo" alt="Your photo">
+
+    <!-- LOBBY BADGE (top left) -->
+    <div id="lobby-badge">
+      <span id="lobby-badge-name"></span>
+      <button id="btn-leave-lobby">Leave</button>
     </div>
-    <p id="step-confirm-error" class="step-error"></p>
-    <div class="step-actions">
-      <button id="btn-confirm-back" class="btn-secondary">← Back</button>
-      <button id="btn-confirm-submit" class="btn-primary">Submit 🚀</button>
+
+    <!-- LEADERBOARD -->
+    <div id="leaderboard">
+      <h2>🏆 Top spots</h2>
+      <ul id="leaderboard-list">
+        <li class="loading">Loading…</li>
+      </ul>
     </div>
+
+    <!-- FAB -->
+    <button id="fab-submit">＋ Post a sticker</button>
+
+    <!-- ── STEP MODALS ───────────────────────────── -->
+
+    <!-- Step 1: Username -->
+    <div id="step-username" class="step-card" style="display:none;">
+      <div class="step-header">
+        <span class="step-icon">👤</span>
+        <h2>Who are you?</h2>
+        <p>Enter a username to track your stickers</p>
+      </div>
+      <input type="text" id="input-username" placeholder="Your username" autocomplete="off">
+      <p id="step-username-error" class="step-error"></p>
+      <div class="step-actions">
+        <button id="btn-username-cancel" class="btn-secondary">Cancel</button>
+        <button id="btn-username-next" class="btn-primary">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Location (handled by hint bar) -->
+
+    <!-- Step 3: Camera -->
+    <div id="step-camera" class="step-card" style="display:none;">
+      <div class="step-header">
+        <span class="step-icon">📸</span>
+        <h2>Add a photo</h2>
+        <p>Show us where you put the sticker!</p>
+      </div>
+      <div id="photo-preview-wrap" style="display:none;">
+        <img id="photo-preview" alt="Preview">
+      </div>
+      <div class="camera-buttons">
+        <button id="btn-camera-take" class="btn-secondary">📷 Take photo</button>
+        <button id="btn-camera-upload" class="btn-secondary">🖼 Upload image</button>
+      </div>
+      <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="file-input" accept="image/*" style="display:none;">
+      <p id="step-camera-error" class="step-error"></p>
+      <div class="step-actions">
+        <button id="btn-camera-back" class="btn-secondary">← Back</button>
+        <button id="btn-camera-skip" class="btn-ghost">Skip</button>
+        <button id="btn-camera-next" class="btn-primary" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Confirm -->
+    <div id="step-confirm" class="step-card" style="display:none;">
+      <div class="step-header">
+        <span class="step-icon">✅</span>
+        <h2>Confirm submission</h2>
+        <p>Ready to post your sticker?</p>
+      </div>
+      <div class="confirm-details">
+        <div class="confirm-row">
+          <span class="confirm-label">👤 User</span>
+          <span id="confirm-username" class="confirm-value"></span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">📍 Location</span>
+          <span id="confirm-location" class="confirm-value"></span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">🏠 Lobby</span>
+          <span id="confirm-lobby" class="confirm-value"></span>
+        </div>
+      </div>
+      <div id="confirm-photo-wrap" style="display:none;">
+        <img id="confirm-photo" alt="Your photo">
+      </div>
+      <p id="step-confirm-error" class="step-error"></p>
+      <div class="step-actions">
+        <button id="btn-confirm-back" class="btn-secondary">← Back</button>
+        <button id="btn-confirm-submit" class="btn-primary">Submit 🚀</button>
+      </div>
+    </div>
+
   </div>
 
-  <!-- TOAST notification -->
+  <!-- TOAST -->
   <div id="toast"></div>
 
   <!-- Scripts -->

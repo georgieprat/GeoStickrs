@@ -7,6 +7,77 @@ body {
   overflow: hidden;
 }
 
+/* ── LOBBY SCREEN ────────────────────────────────────── */
+#lobby-screen {
+  position: fixed;
+  inset: 0;
+  background: #f4f4f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+#lobby-card {
+  background: #fff;
+  border: 1px solid #e4e4e7;
+  border-radius: 20px;
+  padding: 36px 28px;
+  width: 340px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+#lobby-card h1 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #18181b;
+  letter-spacing: -0.5px;
+}
+
+.lobby-subtitle {
+  font-size: 13px;
+  color: #71717a;
+  margin-top: -8px;
+}
+
+#lobby-card input[type="password"] {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #d4d4d8;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  text-align: center;
+  letter-spacing: 3px;
+  transition: border-color 0.15s;
+  background: #fafafa;
+}
+
+#lobby-card input[type="password"]:focus {
+  border-color: #18181b;
+  background: #fff;
+}
+
+#lobby-card .btn-primary {
+  width: 100%;
+  text-align: center;
+  padding: 12px;
+  font-size: 15px;
+}
+
+/* ── APP WRAPPER ─────────────────────────────────────── */
+#app {
+  position: fixed;
+  inset: 0;
+}
+
 /* ── MAP ─────────────────────────────────────────────── */
 #map {
   position: fixed;
@@ -31,6 +102,47 @@ body {
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(3px);
   pointer-events: all;
+}
+
+/* ── LOBBY BADGE ─────────────────────────────────────── */
+#lobby-badge {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid #e4e4e7;
+  border-radius: 100px;
+  padding: 7px 7px 7px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+#lobby-badge-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #18181b;
+  white-space: nowrap;
+}
+
+#btn-leave-lobby {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid #e4e4e7;
+  background: #f4f4f5;
+  color: #71717a;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+#btn-leave-lobby:hover {
+  background: #e4e4e7;
+  color: #18181b;
 }
 
 /* ── LEADERBOARD ─────────────────────────────────────── */
@@ -106,7 +218,7 @@ body {
   font-family: inherit;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s, opacity 0.2s;
   white-space: nowrap;
 }
 
@@ -114,10 +226,6 @@ body {
   background: #3f3f46;
   transform: translateX(-50%) translateY(-2px);
   box-shadow: 0 6px 24px rgba(0,0,0,0.3);
-}
-
-#fab-submit:active {
-  transform: translateX(-50%) translateY(0);
 }
 
 /* ── LOCATION HINT BAR ───────────────────────────────── */
@@ -147,10 +255,7 @@ body {
   color: #3f3f46;
 }
 
-.hint-buttons {
-  display: flex;
-  gap: 8px;
-}
+.hint-buttons { display: flex; gap: 8px; }
 
 /* ── STEP CARDS ──────────────────────────────────────── */
 .step-card {
@@ -175,9 +280,7 @@ body {
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-.step-card.pop-in {
-  animation: popIn 0.2s ease forwards;
-}
+.step-card.pop-in { animation: popIn 0.2s ease forwards; }
 
 .step-header {
   display: flex;
@@ -187,21 +290,10 @@ body {
   gap: 4px;
 }
 
-.step-icon {
-  font-size: 32px;
-  margin-bottom: 4px;
-}
+.step-icon { font-size: 32px; margin-bottom: 4px; }
 
-.step-header h2 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #18181b;
-}
-
-.step-header p {
-  font-size: 13px;
-  color: #71717a;
-}
+.step-header h2 { font-size: 18px; font-weight: 700; color: #18181b; }
+.step-header p  { font-size: 13px; color: #71717a; }
 
 /* ── INPUTS ──────────────────────────────────────────── */
 input[type="text"] {
@@ -254,7 +346,7 @@ input[type="text"]:focus {
   transition: background 0.15s;
 }
 
-.btn-primary:hover { background: #3f3f46; }
+.btn-primary:hover  { background: #3f3f46; }
 .btn-primary:disabled { background: #a1a1aa; cursor: not-allowed; }
 
 .btn-secondary {
@@ -286,11 +378,7 @@ input[type="text"]:focus {
 .btn-ghost:hover { color: #18181b; }
 
 /* ── CAMERA STEP ─────────────────────────────────────── */
-.camera-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
+.camera-buttons { display: flex; gap: 8px; justify-content: center; }
 
 #photo-preview-wrap,
 #confirm-photo-wrap {
@@ -325,19 +413,8 @@ input[type="text"]:focus {
   gap: 12px;
 }
 
-.confirm-label {
-  font-size: 12px;
-  color: #71717a;
-  white-space: nowrap;
-}
-
-.confirm-value {
-  font-size: 13px;
-  font-weight: 500;
-  color: #18181b;
-  text-align: right;
-  word-break: break-all;
-}
+.confirm-label { font-size: 12px; color: #71717a; white-space: nowrap; }
+.confirm-value { font-size: 13px; font-weight: 500; color: #18181b; text-align: right; word-break: break-all; }
 
 /* ── TOAST ───────────────────────────────────────────── */
 #toast {
@@ -358,10 +435,7 @@ input[type="text"]:focus {
   white-space: nowrap;
 }
 
-#toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ── LEAFLET POPUP ───────────────────────────────────── */
 .leaflet-popup-content {
@@ -375,4 +449,5 @@ input[type="text"]:focus {
   .step-card { padding: 20px; width: 92vw; }
   #leaderboard { max-width: 160px; }
   #fab-submit { font-size: 14px; padding: 12px 22px; }
+  #location-hint { border-radius: 16px; padding: 12px 16px; }
 }

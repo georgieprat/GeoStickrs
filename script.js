@@ -5,14 +5,104 @@ const SUPABASE_URL = 'https://bbornsnrwpqeugnmhmxb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_qPM6-sPV3CvI3dl34_161A_Jfny2BC7';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ── 2. MAP SETUP ─────────────────────────────────────
-const map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
+// ── 2. LOBBY STATE ───────────────────────────────────
+let currentLobby = null; // { name, password }
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CARTO'
-}).addTo(map);
+// Restore lobby from sessionStorage (survives refresh, not new tab)
+const savedLobby = sessionStorage.getItem('geostickrs_lobby');
+if (savedLobby) {
+  currentLobby = JSON.parse(savedLobby);
+  enterApp();
+}
 
-// ── 3. STATE ─────────────────────────────────────────
+// ── 3. LOBBY SCREEN ──────────────────────────────────
+document.getElementById('btn-lobby-join').addEventListener('click', joinLobby);
+document.getElementById('lobby-password').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') joinLobby();
+});
+
+async function joinLobby() {
+  const input = document.getElementById('lobby-password').value.trim();
+  const errorEl = document.getElementById('lobby-error');
+  errorEl.style.display = 'none';
+
+  if (!input) {
+    showLobbyError('Please enter a password.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-lobby-join');
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+
+  // Look up password in lobbies table
+  const { data, error } = await supabase
+    .from('lobbies')
+    .select('name, password')
+    .eq('password', input)
+    .single();
+
+  btn.disabled = false;
+  btn.textContent = 'Join lobby →';
+
+  if (error || !data) {
+    showLobbyError('Wrong password. Try again.');
+    return;
+  }
+
+  currentLobby = { name: data.name, password: data.password };
+  sessionStorage.setItem('geostickrs_lobby', JSON.stringify(currentLobby));
+  enterApp();
+}
+
+function showLobbyError(msg) {
+  const el = document.getElementById('lobby-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function enterApp() {
+  document.getElementById('lobby-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('lobby-badge-name').textContent = `🏠 ${currentLobby.name}`;
+  initMap();
+}
+
+// ── 4. LEAVE LOBBY ───────────────────────────────────
+document.getElementById('btn-leave-lobby').addEventListener('click', () => {
+  sessionStorage.removeItem('geostickrs_lobby');
+  currentLobby = null;
+  submission.username = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('lobby-screen').style.display = 'flex';
+  document.getElementById('lobby-password').value = '';
+});
+
+// ── 5. MAP SETUP ─────────────────────────────────────
+let map = null;
+
+function initMap() {
+  if (map) return; // prevent double init
+  map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO'
+  }).addTo(map);
+
+  // Click on map to set location
+  map.on('click', (e) => {
+    if (currentStep !== 'location') return;
+    submission.lat = e.latlng.lat;
+    submission.lng = e.latlng.lng;
+    placePreviewMarker(submission.lat, submission.lng);
+    setLocationMsg(`📍 ${submission.lat.toFixed(4)}, ${submission.lng.toFixed(4)} — press Continue.`, true);
+    document.getElementById('btn-location-next').disabled = false;
+  });
+
+  loadAllStickers();
+  loadLeaderboard();
+}
+
+// ── 6. SUBMISSION STATE ──────────────────────────────
 let currentStep = null;
 let submission = {
   username: null,
@@ -23,10 +113,12 @@ let submission = {
 };
 let previewMarker = null;
 
-// ── 4. STEP FLOW ─────────────────────────────────────
+// ── 7. STEP FLOW ─────────────────────────────────────
 function openStep(step) {
   currentStep = step;
   hideAllSteps();
+
+  // Hide FAB
   const fab = document.getElementById('fab-submit');
   fab.style.opacity = '0';
   fab.style.pointerEvents = 'none';
@@ -51,7 +143,6 @@ function hideAllSteps() {
     const el = document.getElementById(`step-${s}`);
     if (el) { el.style.display = 'none'; el.classList.remove('pop-in'); }
   });
-  // clear errors
   document.querySelectorAll('.step-error').forEach(e => e.style.display = 'none');
 }
 
@@ -60,13 +151,14 @@ function closeFlow() {
   hideAllSteps();
   document.getElementById('map-overlay').classList.remove('active');
   document.getElementById('location-hint').style.display = 'none';
+  // Show FAB again
   const fab = document.getElementById('fab-submit');
   fab.style.opacity = '1';
   fab.style.pointerEvents = 'auto';
   if (previewMarker) { map.removeLayer(previewMarker); previewMarker = null; }
 }
 
-// ── 5. FAB BUTTON ────────────────────────────────────
+// ── 8. FAB ───────────────────────────────────────────
 document.getElementById('fab-submit').addEventListener('click', () => {
   submission.lat = null;
   submission.lng = null;
@@ -80,7 +172,7 @@ document.getElementById('fab-submit').addEventListener('click', () => {
   }
 });
 
-// ── 6. STEP: USERNAME ────────────────────────────────
+// ── 9. STEP: USERNAME ────────────────────────────────
 document.getElementById('btn-username-next').addEventListener('click', () => {
   const val = document.getElementById('input-username').value.trim();
   if (!val) { showStepError('username', 'Please enter a username.'); return; }
@@ -95,7 +187,7 @@ document.getElementById('input-username').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('btn-username-next').click();
 });
 
-// ── 7. STEP: LOCATION ────────────────────────────────
+// ── 10. STEP: LOCATION ───────────────────────────────
 function requestGPS() {
   document.getElementById('btn-location-next').disabled = true;
   if (!navigator.geolocation) {
@@ -109,7 +201,7 @@ function requestGPS() {
       submission.lng = pos.coords.longitude;
       placePreviewMarker(submission.lat, submission.lng);
       map.setView([submission.lat, submission.lng], 6);
-      setLocationMsg(`✅ GPS found! Adjust by clicking the map, or continue.`, true);
+      setLocationMsg('✅ GPS found! Adjust by clicking the map, or continue.', true);
       document.getElementById('btn-location-next').disabled = false;
     },
     () => {
@@ -124,15 +216,6 @@ function setLocationMsg(msg, success) {
   el.style.color = success ? '#16a34a' : '#52525b';
 }
 
-map.on('click', (e) => {
-  if (currentStep !== 'location') return;
-  submission.lat = e.latlng.lat;
-  submission.lng = e.latlng.lng;
-  placePreviewMarker(submission.lat, submission.lng);
-  setLocationMsg(`📍 ${submission.lat.toFixed(4)}, ${submission.lng.toFixed(4)} — press Continue.`, true);
-  document.getElementById('btn-location-next').disabled = false;
-});
-
 document.getElementById('btn-location-next').addEventListener('click', () => {
   if (!submission.lat) { setLocationMsg('Please allow GPS or click the map first.', false); return; }
   openStep('camera');
@@ -140,7 +223,7 @@ document.getElementById('btn-location-next').addEventListener('click', () => {
 
 document.getElementById('btn-location-back').addEventListener('click', () => openStep('username'));
 
-// ── 8. STEP: CAMERA ──────────────────────────────────
+// ── 11. STEP: CAMERA ─────────────────────────────────
 document.getElementById('btn-camera-take').addEventListener('click', () => {
   document.getElementById('camera-input').click();
 });
@@ -177,15 +260,14 @@ document.getElementById('btn-camera-next').addEventListener('click', () => {
   populateConfirm();
 });
 
-document.getElementById('btn-camera-back').addEventListener('click', () => {
-  openStep('location');
-});
+document.getElementById('btn-camera-back').addEventListener('click', () => openStep('location'));
 
-// ── 9. STEP: CONFIRM ─────────────────────────────────
+// ── 12. STEP: CONFIRM ────────────────────────────────
 function populateConfirm() {
   document.getElementById('confirm-username').textContent = submission.username;
   document.getElementById('confirm-location').textContent =
     `${submission.lat.toFixed(4)}, ${submission.lng.toFixed(4)}`;
+  document.getElementById('confirm-lobby').textContent = currentLobby.name;
   const imgWrap = document.getElementById('confirm-photo-wrap');
   if (submission.photoDataUrl) {
     document.getElementById('confirm-photo').src = submission.photoDataUrl;
@@ -206,10 +288,15 @@ document.getElementById('btn-confirm-submit').addEventListener('click', async ()
     let photoURL = null;
 
     if (submission.photoFile) {
-      const fileName = `${Date.now()}_${submission.photoFile.name.replace(/\s/g, '_')}`;
+      // Store photos in a subfolder per lobby name (sanitised)
+      const lobbyFolder = currentLobby.name.replace(/\s+/g, '_').toLowerCase();
+      const fileName = `${lobbyFolder}/${Date.now()}_${submission.photoFile.name.replace(/\s/g, '_')}`;
+
       const { error: uploadError } = await supabase.storage
-        .from('photos').upload(fileName, submission.photoFile, { cacheControl: '3600', upsert: false });
+        .from('photos')
+        .upload(fileName, submission.photoFile, { cacheControl: '3600', upsert: false });
       if (uploadError) throw uploadError;
+
       const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
       photoURL = urlData.publicUrl;
     }
@@ -222,6 +309,7 @@ document.getElementById('btn-confirm-submit').addEventListener('click', async ()
       lng: submission.lng,
       photo_url: photoURL,
       score,
+      lobby: currentLobby.name,  // tag sticker with lobby name
     }]);
     if (insertError) throw insertError;
 
@@ -229,7 +317,13 @@ document.getElementById('btn-confirm-submit').addEventListener('click', async ()
     const savedLng = submission.lng;
 
     closeFlow();
-    addMarkerToMap({ username: submission.username, lat: savedLat, lng: savedLng, photo_url: photoURL, score });
+    addMarkerToMap({
+      username: submission.username,
+      lat: savedLat,
+      lng: savedLng,
+      photo_url: photoURL,
+      score,
+    });
     map.setView([savedLat, savedLng], 8);
 
     submission.lat = null;
@@ -251,7 +345,7 @@ document.getElementById('btn-confirm-submit').addEventListener('click', async ()
   }
 });
 
-// ── 10. SCORING ──────────────────────────────────────
+// ── 13. SCORING ──────────────────────────────────────
 const HOME_LAT = 48.2082;
 const HOME_LNG = 16.3738;
 
@@ -264,7 +358,7 @@ async function calculateScore(lat, lng) {
     const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`);
     const data = await res.json();
     score += Math.min(Math.round(Math.max(0, data.elevation[0]) / 100), 30);
-  } catch (e) { /* elevation optional */ }
+  } catch (e) { /* optional */ }
   return { score };
 }
 
@@ -278,7 +372,7 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ── 11. MARKERS ──────────────────────────────────────
+// ── 14. MARKERS ──────────────────────────────────────
 function placePreviewMarker(lat, lng) {
   if (previewMarker) map.removeLayer(previewMarker);
   previewMarker = L.circleMarker([lat, lng], {
@@ -292,22 +386,33 @@ function addMarkerToMap(s) {
     <div style="font-family:sans-serif;font-size:13px;max-width:180px;line-height:1.5;">
       <strong>${s.username}</strong><br>
       🏆 <strong>${s.score} pts</strong>
-      ${s.photo_url ? `<br><img src="${s.photo_url}" style="max-width:160px;margin-top:6px;border-radius:6px;display:block;">` : ''}
+      ${s.photo_url
+        ? `<br><img src="${s.photo_url}"
+            style="max-width:160px;margin-top:6px;border-radius:6px;display:block;">`
+        : ''}
     </div>
   `);
 }
 
+// Load only stickers belonging to current lobby
 async function loadAllStickers() {
-  const { data, error } = await supabase.from('stickers').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('stickers')
+    .select('*')
+    .eq('lobby', currentLobby.name)
+    .order('created_at', { ascending: false });
   if (error) { console.error(error); return; }
   data.forEach(addMarkerToMap);
 }
 
-// ── 12. LEADERBOARD ──────────────────────────────────
+// ── 15. LEADERBOARD (lobby-filtered) ─────────────────
 async function loadLeaderboard() {
   const { data, error } = await supabase
-    .from('stickers').select('username, score')
-    .order('score', { ascending: false }).limit(5);
+    .from('stickers')
+    .select('username, score')
+    .eq('lobby', currentLobby.name)
+    .order('score', { ascending: false })
+    .limit(5);
   if (error) return;
   const list = document.getElementById('leaderboard-list');
   if (!list) return;
@@ -322,7 +427,7 @@ async function loadLeaderboard() {
       ).join('');
 }
 
-// ── 13. TOAST ────────────────────────────────────────
+// ── 16. TOAST & ERRORS ───────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
   if (!t) return;
@@ -335,7 +440,3 @@ function showStepError(step, msg) {
   const el = document.getElementById(`step-${step}-error`);
   if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
-
-// ── INIT ─────────────────────────────────────────────
-loadAllStickers();
-loadLeaderboard();
