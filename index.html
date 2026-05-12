@@ -4,70 +4,114 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GeoStickrs</title>
-
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <!-- Your styles -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div id="app">
+  <!-- MAP (full screen) -->
+  <div id="map"></div>
 
-    <!-- SIDEBAR -->
-    <div id="sidebar">
-      <div id="sidebar-header">
-        <h1>📍 GeoStickrs</h1>
-        <p class="subtitle">Drop your sticker on the map</p>
-      </div>
+  <!-- DARK OVERLAY over map during flow -->
+  <div id="map-overlay"></div>
 
-      <div class="form-section">
-        <label for="username">Username</label>
-        <input type="text" id="username" placeholder="e.g. alex">
-      </div>
-
-      <div class="form-section">
-        <label for="description">Description <span class="optional">(optional)</span></label>
-        <input type="text" id="description" placeholder="e.g. on a summit sign">
-      </div>
-
-      <div class="form-section">
-        <label for="photo">Photo of sticker</label>
-        <input type="file" id="photo" accept="image/*">
-      </div>
-
-      <div class="form-section">
-        <label>Location</label>
-        <button id="locate-btn">📡 Use my GPS location</button>
-        <p class="hint">or click anywhere on the map</p>
-        <p id="location-display">No location set yet</p>
-      </div>
-
-      <button id="submit-btn">Submit sticker spot 🚀</button>
-      <p id="status-msg"></p>
-
-      <!-- Leaderboard -->
-      <div id="leaderboard">
-        <h2>🏆 Top spots</h2>
-        <ul id="leaderboard-list">
-          <li class="loading">Loading...</li>
-        </ul>
-      </div>
+  <!-- LOCATION HINT (shown only during location step) -->
+  <div id="location-hint">
+    <span id="location-instruction">Click on the map to place your sticker</span>
+    <div class="hint-buttons">
+      <button id="btn-location-back" class="btn-secondary">← Back</button>
+      <button id="btn-location-next" class="btn-primary" disabled>Continue →</button>
     </div>
-
-    <!-- MAP -->
-    <div id="map"></div>
-
   </div>
 
-  <!-- Leaflet JS — must come before script.js -->
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <!-- LEADERBOARD (top left) -->
+  <div id="leaderboard">
+    <h2>🏆 Top spots</h2>
+    <ul id="leaderboard-list">
+      <li class="loading">Loading…</li>
+    </ul>
+  </div>
 
-  <!-- Optional extras you had — keep if needed -->
+  <!-- FAB: main submit button (bottom center) -->
+  <button id="fab-submit">＋ Post a sticker</button>
+
+  <!-- ── STEP MODALS ─────────────────────────────── -->
+
+  <!-- Step 1: Username -->
+  <div id="step-username" class="step-card" style="display:none;">
+    <div class="step-header">
+      <span class="step-icon">👤</span>
+      <h2>Who are you?</h2>
+      <p>Enter a username to track your stickers</p>
+    </div>
+    <input type="text" id="input-username" placeholder="Your username" autocomplete="off">
+    <p id="step-username-error" class="step-error"></p>
+    <div class="step-actions">
+      <button id="btn-username-cancel" class="btn-secondary">Cancel</button>
+      <button id="btn-username-next" class="btn-primary">Continue →</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Location (handled by location-hint bar above) -->
+
+  <!-- Step 3: Camera / Photo -->
+  <div id="step-camera" class="step-card" style="display:none;">
+    <div class="step-header">
+      <span class="step-icon">📸</span>
+      <h2>Add a photo</h2>
+      <p>Show us where you put the sticker!</p>
+    </div>
+    <div id="photo-preview-wrap" style="display:none;">
+      <img id="photo-preview" alt="Preview">
+    </div>
+    <div class="camera-buttons">
+      <button id="btn-camera-take" class="btn-secondary">📷 Take photo</button>
+      <button id="btn-camera-upload" class="btn-secondary">🖼 Upload image</button>
+    </div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="file-input" accept="image/*" style="display:none;">
+    <p id="step-camera-error" class="step-error"></p>
+    <div class="step-actions">
+      <button id="btn-camera-back" class="btn-secondary">← Back</button>
+      <button id="btn-camera-skip" class="btn-ghost">Skip</button>
+      <button id="btn-camera-next" class="btn-primary" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Confirm -->
+  <div id="step-confirm" class="step-card" style="display:none;">
+    <div class="step-header">
+      <span class="step-icon">✅</span>
+      <h2>Confirm submission</h2>
+      <p>Ready to post your sticker?</p>
+    </div>
+    <div class="confirm-details">
+      <div class="confirm-row">
+        <span class="confirm-label">👤 User</span>
+        <span id="confirm-username" class="confirm-value"></span>
+      </div>
+      <div class="confirm-row">
+        <span class="confirm-label">📍 Location</span>
+        <span id="confirm-location" class="confirm-value"></span>
+      </div>
+    </div>
+    <div id="confirm-photo-wrap" style="display:none;">
+      <img id="confirm-photo" alt="Your photo">
+    </div>
+    <p id="step-confirm-error" class="step-error"></p>
+    <div class="step-actions">
+      <button id="btn-confirm-back" class="btn-secondary">← Back</button>
+      <button id="btn-confirm-submit" class="btn-primary">Submit 🚀</button>
+    </div>
+  </div>
+
+  <!-- TOAST notification -->
+  <div id="toast"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
   <script src="https://unpkg.com/osmtogeojson@3.0.0-beta.5/osmtogeojson.js"></script>
-
-  <!-- Your app logic — type="module" required for Supabase import -->
   <script type="module" src="script.js"></script>
 
 </body>
