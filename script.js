@@ -84,8 +84,8 @@ let map = null;
 function initMap() {
   if (map) return; // prevent double init
   map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CARTO'
+  L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; Stadia Maps &copy; OpenMapTiles &copy; OpenStreetMap'
   }).addTo(map);
 
   // Click on map to set location
