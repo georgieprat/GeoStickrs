@@ -27,7 +27,9 @@ let previewMarker = null;
 function openStep(step) {
   currentStep = step;
   hideAllSteps();
-  document.getElementById('fab-submit').style.display = 'none';
+  const fab = document.getElementById('fab-submit');
+  fab.style.opacity = '0';
+  fab.style.pointerEvents = 'none';
 
   const overlay = document.getElementById('map-overlay');
   if (step === 'location') {
@@ -58,7 +60,9 @@ function closeFlow() {
   hideAllSteps();
   document.getElementById('map-overlay').classList.remove('active');
   document.getElementById('location-hint').style.display = 'none';
-  document.getElementById('fab-submit').style.display = 'block';
+  const fab = document.getElementById('fab-submit');
+  fab.style.opacity = '1';
+  fab.style.pointerEvents = 'auto';
   if (previewMarker) { map.removeLayer(previewMarker); previewMarker = null; }
 }
 
