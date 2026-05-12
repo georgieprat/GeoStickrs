@@ -27,6 +27,7 @@ let previewMarker = null;
 function openStep(step) {
   currentStep = step;
   hideAllSteps();
+  document.getElementById('fab-submit').style.display = 'none';
 
   const overlay = document.getElementById('map-overlay');
   if (step === 'location') {
@@ -57,6 +58,7 @@ function closeFlow() {
   hideAllSteps();
   document.getElementById('map-overlay').classList.remove('active');
   document.getElementById('location-hint').style.display = 'none';
+  document.getElementById('fab-submit').style.display = 'block';
   if (previewMarker) { map.removeLayer(previewMarker); previewMarker = null; }
 }
 
