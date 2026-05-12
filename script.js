@@ -9,8 +9,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // ── 2. LEAFLET MAP ───────────────────────────────────
 const map = L.map('map').setView([20, 0], 2);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors'
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO'
 }).addTo(map);
 
 // ── 3. LOCATION DETECTION ────────────────────────────
