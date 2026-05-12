@@ -1,27 +1,74 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-    <script src="https://unpkg.com/osmtogeojson@3.0.0-beta.5/osmtogeojson.js"></script>
-    <script type="module" src="script.js"></script>
-    <title>GeoStrickrs</title>
-  </head>
-  <body>
-    <div id="map" style="width:100%; height:100vh; display:block;"></div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoStickrs</title>
 
-    <script>
-        let map;
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <!-- Your styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-        function initMap() {
-            document.getElementById('map').style.display = 'block';
-            map = L.map('map').setView([0, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-        }
-    </script>
-  </body>
+  <div id="app">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <h1>📍 GeoStickrs</h1>
+        <p class="subtitle">Drop your sticker on the map</p>
+      </div>
+
+      <div class="form-section">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="e.g. alex">
+      </div>
+
+      <div class="form-section">
+        <label for="description">Description <span class="optional">(optional)</span></label>
+        <input type="text" id="description" placeholder="e.g. on a summit sign">
+      </div>
+
+      <div class="form-section">
+        <label for="photo">Photo of sticker</label>
+        <input type="file" id="photo" accept="image/*">
+      </div>
+
+      <div class="form-section">
+        <label>Location</label>
+        <button id="locate-btn">📡 Use my GPS location</button>
+        <p class="hint">or click anywhere on the map</p>
+        <p id="location-display">No location set yet</p>
+      </div>
+
+      <button id="submit-btn">Submit sticker spot 🚀</button>
+      <p id="status-msg"></p>
+
+      <!-- Leaderboard -->
+      <div id="leaderboard">
+        <h2>🏆 Top spots</h2>
+        <ul id="leaderboard-list">
+          <li class="loading">Loading...</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div id="map"></div>
+
+  </div>
+
+  <!-- Leaflet JS — must come before script.js -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+  <!-- Optional extras you had — keep if needed -->
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <script src="https://unpkg.com/osmtogeojson@3.0.0-beta.5/osmtogeojson.js"></script>
+
+  <!-- Your app logic — type="module" required for Supabase import -->
+  <script type="module" src="script.js"></script>
+
+</body>
 </html>
