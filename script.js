@@ -12,7 +12,7 @@ let currentLobby = null; // { name, password }
 const savedLobby = sessionStorage.getItem('geostickrs_lobby');
 if (savedLobby) {
   currentLobby = JSON.parse(savedLobby);
-  enterApp();
+  window.addEventListener('load', () => enterApp());
 }
 
 // ── 3. LOBBY SCREEN ──────────────────────────────────
