@@ -76,6 +76,7 @@ document.getElementById('btn-leave-lobby').addEventListener('click', () => {
   document.getElementById('app').style.display = 'none';
   document.getElementById('lobby-screen').style.display = 'flex';
   document.getElementById('lobby-password').value = '';
+  window.location.reload();
 });
 
 // ── 5. MAP SETUP ─────────────────────────────────────
@@ -407,18 +408,39 @@ async function loadAllStickers() {
 
 // ── 15. LEADERBOARD (lobby-filtered) ─────────────────
 async function loadLeaderboard() {
+  const mode = document.getElementById('leaderboard-mode')?.value || 'top';
+  const list = document.getElementById('leaderboard-list');
+  if (!list) return;
+  list.innerHTML = '<li class="loading">Loading…</li>';
+
   const { data, error } = await supabase
     .from('stickers')
     .select('username, score')
     .eq('lobby', currentLobby.name)
-    .order('score', { ascending: false })
-    .limit(5);
-  if (error) return;
-  const list = document.getElementById('leaderboard-list');
-  if (!list) return;
-  list.innerHTML = data.length === 0
+    .order('score', { ascending: false });
+
+  if (error || !data) return;
+
+  let entries = [];
+
+  if (mode === 'top') {
+    // Best single score per entry, top 5
+    entries = data.slice(0, 5);
+  } else {
+    // Combine scores by username
+    const totals = {};
+    data.forEach(s => {
+      totals[s.username] = (totals[s.username] || 0) + s.score;
+    });
+    entries = Object.entries(totals)
+      .map(([username, score]) => ({ username, score }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  }
+
+  list.innerHTML = entries.length === 0
     ? '<li class="loading">No stickers yet!</li>'
-    : data.map((s, i) =>
+    : entries.map((s, i) =>
         `<li>
           <span class="lb-rank">${['🥇','🥈','🥉','4.','5.'][i]}</span>
           <span class="lb-name">${s.username}</span>
@@ -426,6 +448,9 @@ async function loadLeaderboard() {
         </li>`
       ).join('');
 }
+
+// Reload leaderboard when switching mode
+document.getElementById('leaderboard-mode')?.addEventListener('change', loadLeaderboard);
 
 // ── 16. TOAST & ERRORS ───────────────────────────────
 function showToast(msg) {

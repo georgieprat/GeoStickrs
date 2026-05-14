@@ -47,11 +47,17 @@
 
     <!-- LEADERBOARD -->
     <div id="leaderboard">
-      <h2>🏆 Top spots</h2>
+      <div class="leaderboard-header">
+        <h2>🏆 Leaderboard</h2>
+        <select id="leaderboard-mode">
+          <option value="top">Top spots</option>
+          <option value="total">Total score</option>
+        </select>
+      </div>
       <ul id="leaderboard-list">
         <li class="loading">Loading…</li>
       </ul>
-    </div>
+    </div>                    
 
     <!-- FAB -->
     <button id="fab-submit">＋ Post a sticker</button>
