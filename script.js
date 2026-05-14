@@ -114,6 +114,19 @@ let submission = {
 };
 let previewMarker = null;
 
+// ── COLOR FROM USERNAME ───────────────────────────────
+function usernameToColor(username) {
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return {
+    fill: `hsl(${hue}, 70%, 55%)`,
+    border: `hsl(${hue}, 70%, 35%)`
+  };
+}
+
 // ── 7. STEP FLOW ─────────────────────────────────────
 function openStep(step) {
   currentStep = step;
@@ -382,9 +395,36 @@ function placePreviewMarker(lat, lng) {
 }
 
 function addMarkerToMap(s) {
-  const marker = L.marker([s.lat, s.lng]).addTo(map);
+  const color = usernameToColor(s.username);
+
+  // Custom colored circle marker icon
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="
+      width: 22px;
+      height: 22px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      background: ${color.fill};
+      border: 2.5px solid ${color.border};
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    "></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
+    popupAnchor: [0, -24]
+  });
+
+  const marker = L.marker([s.lat, s.lng], { icon }).addTo(map);
   marker.bindPopup(`
     <div style="font-family:sans-serif;font-size:13px;max-width:180px;line-height:1.5;">
+      <span style="
+        display:inline-block;
+        width:10px;height:10px;
+        border-radius:50%;
+        background:${color.fill};
+        margin-right:5px;
+        vertical-align:middle;
+      "></span>
       <strong>${s.username}</strong><br>
       🏆 <strong>${s.score} pts</strong>
       ${s.photo_url
