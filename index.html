@@ -18,6 +18,28 @@
       <input type="password" id="lobby-password" placeholder="Lobby password" autocomplete="off">
       <p id="lobby-error" class="step-error"></p>
       <button id="btn-lobby-join" class="btn-primary">Join lobby →</button>
+      <button id="btn-lobby-create" class="btn-secondary">Create lobby →</button>
+      <div id="lobby-creator">
+        <div class="horizontal-line"></div>
+        <p class="lobby-subtitle">Enter your new lobby name and password</p>
+        <input type="text" id="lobby-new-name" placeholder="Lobby name" autocomplete="off">
+        <input type="password" id="lobby-new-password" placeholder="Lobby password" autocomplete="off">
+        <p id="step-lobby-create-error" class="step-error"></p>
+        <button id="btn-lobby-home" class="btn-primary">Next: set home location →</button>
+      </div>    
+    </div>     
+  </div>
+
+  <!-- Home location picker (shown over map) -->
+  <div id="lobby-home-picker" style="display:none;">
+    <div id="lobby-home-map"></div>
+  </div> 
+
+  <div id="lobby-home-hint" style="display:none;">
+    <span id="lobby-home-instruction">Click on the map to set your lobby's home point</span>
+    <div class="hint-buttons">
+      <button id="btn-home-back" class="btn-secondary">← Back</button>
+      <button id="btn-home-confirm" class="btn-primary" disabled>Confirm home →</button>
     </div>
   </div>
 
