@@ -220,6 +220,15 @@ body {
 
 #leaderboard-list li.loading { color: #a1a1aa; }
 
+.lb-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
 /* ── FAB BUTTON ──────────────────────────────────────── */
 #fab-submit {
   position: fixed;

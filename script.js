@@ -480,13 +480,15 @@ async function loadLeaderboard() {
 
   list.innerHTML = entries.length === 0
     ? '<li class="loading">No stickers yet!</li>'
-    : entries.map((s, i) =>
-        `<li>
+    : entries.map((s, i) => {
+        const color = usernameToColor(s.username);
+        return `<li>
           <span class="lb-rank">${['🥇','🥈','🥉','4.','5.'][i]}</span>
+          <span class="lb-dot" style="background:${color.fill};border-color:${color.border};"></span>
           <span class="lb-name">${s.username}</span>
           <span class="lb-score">${s.score} pts</span>
-        </li>`
-      ).join('');
+        </li>`;
+      }).join('');
 }
 
 // Reload leaderboard when switching mode
