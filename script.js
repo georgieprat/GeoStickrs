@@ -92,12 +92,13 @@ document.getElementById('btn-home-confirm').addEventListener('click', async () =
 
   // Check password not already taken
   const { data: existing } = await supabase
-    .from('lobbies').select('id').eq('password', password).single();
+    .from('lobbies').select('id').eq('password', password).maybeSingle();
 
   if (existing) {
     btn.disabled = false;
     btn.textContent = 'Confirm home →';
     document.getElementById('lobby-home-picker').style.display = 'none';
+    document.getElementById('lobby-home-hint').style.display = 'none';
     document.getElementById('lobby-screen').style.display = 'flex';
     const errorEl = document.getElementById('step-lobby-create-error');
     errorEl.textContent = 'That password is already taken. Choose another.';
@@ -111,7 +112,7 @@ document.getElementById('btn-home-confirm').addEventListener('click', async () =
     home_lat: selectedHomeLat,
     home_lng: selectedHomeLng,
   }]);
-
+e
   btn.disabled = false;
   btn.textContent = 'Confirm home →';
 
