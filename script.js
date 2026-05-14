@@ -112,7 +112,7 @@ document.getElementById('btn-home-confirm').addEventListener('click', async () =
     home_lat: selectedHomeLat,
     home_lng: selectedHomeLng,
   }]);
-e
+
   btn.disabled = false;
   btn.textContent = 'Confirm home →';
 
