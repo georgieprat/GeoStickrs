@@ -583,7 +583,7 @@ input[type="text"]:focus {
 }
 
 /* ── RESPONSIVE ──────────────────────────────────────── */
-@media (max-width: 480px) {
+/*@media (max-width: 768px) {
 
   .step-card {
     padding: 20px;
@@ -628,7 +628,28 @@ input[type="text"]:focus {
 
 
 /* ── INTRO SCREEN ───────────────────────────────────── */
+@media screen and (max-width: 900px) {
 
+  #map {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+
+    border-radius: 0 !important;
+    border: none !important;
+  }
+
+  #leaderboard {
+    top: 90px !important;
+    right: 10px !important;
+  }
+
+  #lobby-badge {
+    top: 20px !important;
+    right: 10px !important;
+  }
+}
 #intro-screen {
   position: fixed;
   inset: 0;
