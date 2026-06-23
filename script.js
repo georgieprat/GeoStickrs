@@ -767,6 +767,9 @@ async function startManhunt() {
       return;
     }
     console.log('Manhunt saved to Supabase');
+
+    await loadManhuntFromSupabase();
+
     alert('🏃 Manhunt started.');
 
     },
