@@ -90,6 +90,11 @@ function enterApp() {
 
 
   initMap();
+  setTimeout(() => {
+  if (map) {
+    map.invalidateSize();
+  }
+}, 300);
 }
 
 // Expose globally so lobby.js can call window._enterApp()
