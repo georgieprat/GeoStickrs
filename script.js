@@ -850,3 +850,49 @@ function showManhuntOnMap(manhunt) {
   if (status) status.textContent = 'Active manhunt running';
   if (hint) hint.textContent = 'Search inside the red area. Find the hider and press Caught!';
 }
+
+function initManhuntCaughtButton() {
+  const btn = document.getElementById('btn-manhunt-caught');
+
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    checkManhuntCaught();
+  });
+}
+
+window.addEventListener('load', initManhuntCaughtButton);
+
+
+function checkManhuntCaught() {
+  if (!activeManhunt) {
+    alert('No active manhunt loaded.');
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert('GPS not available.');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const hunterLat = pos.coords.latitude;
+    const hunterLng = pos.coords.longitude;
+
+    const distance = map.distance(
+      [hunterLat, hunterLng],
+      [activeManhunt.hider_lat, activeManhunt.hider_lng]
+    );
+
+    const catchRadiusMeters = 50;
+
+    if (distance <= catchRadiusMeters) {
+      alert(`🏆 Caught! Distance: ${Math.round(distance)} m`);
+    } else {
+      alert(`❌ Not close enough. Distance: ${Math.round(distance)} m`);
+    }
+
+  }, (err) => {
+    alert('GPS error: ' + err.message);
+  });
+}
