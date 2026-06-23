@@ -206,9 +206,32 @@ function initAdminPanel() {
   });
 
   document.getElementById('btn-admin-manhunt')?.addEventListener('click', () => {
-  console.log('Manhunt button clicked');
+
+    document.getElementById('admin-card').style.display = 'none';
+
+    document.getElementById('manhunt-admin-panel').style.display = 'block';
+
+  });
+
+
+
+  document.getElementById('btn-manhunt-start')?.addEventListener('click', () => {
   startManhunt();
   });
+
+  document.getElementById('btn-manhunt-stop')?.addEventListener('click', () => {
+  endManhunt();
+  });
+
+  document.getElementById('btn-manhunt-back')?.addEventListener('click', () => {
+
+  document.getElementById('manhunt-admin-panel').style.display = 'none';
+
+  document.getElementById('admin-card').style.display = 'block';
+
+  });
+
+
 
   document.getElementById('btn-admin-capture')?.addEventListener('click', () => {
     alert('Capture The Sticker coming soon.');
@@ -230,9 +253,6 @@ function initAdminPanel() {
   endTreasureHunt();
 });
 
-  document.getElementById('btn-admin-stop-manhunt')?.addEventListener('click', () => {
-  endManhunt();
-});
 }
 
 window.addEventListener('load', initAdminPanel);
