@@ -230,7 +230,18 @@ function initAdminPanel() {
   });
 
   document.getElementById('btn-admin-review')?.addEventListener('click', () => {
-    alert('Sticker review coming soon.');
+
+    document.getElementById('review-panel').style.display = 'block';
+
+    loadReviewPanel();
+
+});
+
+
+  document.getElementById('btn-review-close')?.addEventListener('click', () => {
+
+    document.getElementById('review-panel').style.display = 'none';
+
   });
 
   document.getElementById('btn-admin-rules')?.addEventListener('click', () => {
@@ -950,6 +961,96 @@ async function saveManhuntScore(lat, lng) {
 
   loadLeaderboard();
 }
+
+
+
+
+async function loadReviewPanel() {
+
+  const lobby = JSON.parse(
+    sessionStorage.getItem('geostickrs_lobby')
+  );
+
+  if (!lobby) return;
+
+  const reviewList =
+    document.getElementById('review-list');
+
+  reviewList.innerHTML = 'Loading...';
+
+  const { data, error } = await supabase
+    .from('stickers')
+    .select('*')
+    .eq('lobby', lobby.name)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    reviewList.innerHTML = 'Failed to load stickers.';
+    return;
+  }
+
+  reviewList.innerHTML = data.map(sticker => `
+    <div class="review-card">
+
+      <strong>${sticker.username}</strong><br>
+
+      🏆 ${sticker.score} pts<br>
+
+      ${
+        sticker.photo_url
+          ? `<img src="${sticker.photo_url}"
+               style="width:100%;max-width:200px;border-radius:8px;margin-top:8px;">`
+          : '<em>No photo</em>'
+      }
+
+      <br><br>
+
+      <button
+        class="delete-sticker-btn"
+        data-id="${sticker.id}">
+        🗑 Delete
+      </button>
+
+    </div>
+  `).join('');
+
+}
+
+
+
+
+document.addEventListener('click', async (e) => {
+
+  if (!e.target.classList.contains('delete-sticker-btn')) {
+    return;
+  }
+
+  const stickerId = e.target.dataset.id;
+
+  if (!confirm('Delete this sticker?')) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from('stickers')
+    .delete()
+    .eq('id', stickerId);
+
+  if (error) {
+    console.error(error);
+    alert('Failed to delete sticker.');
+    return;
+  }
+
+  alert('Sticker deleted.');
+
+  loadReviewPanel();
+  loadLeaderboard();
+
+});
+
+
 
 
 async function endManhunt() {
