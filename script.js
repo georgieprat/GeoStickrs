@@ -12,6 +12,11 @@ const GLOBAL_ADMIN_PASSWORD = 'LBS_Admin';
 // ── MAP SETUP ────────────────────────────────────────
 let map = null;
 
+let activeManhunt = null;
+let manhuntBoxLayer = null;
+let manhuntHiderMarker = null;
+
+
 function initMap() {
   if (map) return;
   map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
@@ -195,7 +200,8 @@ function initAdminPanel() {
   });
 
   document.getElementById('btn-admin-manhunt')?.addEventListener('click', () => {
-    alert('Manhunt mode coming soon.');
+  console.log('Manhunt button clicked');
+  startManhunt();
   });
 
   document.getElementById('btn-admin-capture')?.addEventListener('click', () => {
@@ -710,3 +716,61 @@ async function loadTreasureHuntFromSupabase() {
 
   loadSavedTreasureHunt();
 }
+
+
+
+
+// ── MANHUNT ─────────────────────────────────────────
+
+async function startManhunt() {
+
+  if (!navigator.geolocation) {
+    alert('GPS not available.');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+  console.log('GPS position received:', pos.coords.latitude, pos.coords.longitude);
+
+    const lobby = JSON.parse(
+      sessionStorage.getItem('geostickrs_lobby')
+    );
+
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    const offsetLat = (Math.random() * 0.4) - 0.2;
+    const offsetLng = (Math.random() * 0.4) - 0.2;
+
+    const box = {
+      south: lat - 0.1 + offsetLat,
+      north: lat + 0.1 + offsetLat,
+      west: lng - 0.1 + offsetLng,
+      east: lng + 0.1 + offsetLng
+    };
+
+    const { error } = await supabase
+      .from('manhunts')
+      .insert([{
+        lobby: lobby.name,
+        active: true,
+        hider_name: 'Hider',
+        hider_lat: lat,
+        hider_lng: lng,
+        box_geojson: box
+      }]);
+
+    if (error) {
+      console.error(error);
+      alert('Failed to start manhunt.');
+      return;
+    }
+    console.log('Manhunt saved to Supabase');
+    alert('🏃 Manhunt started.');
+
+    },
+    (err) => {
+      console.error('GPS ERROR:', err);
+      alert('GPS ERROR: ' + err.message);
+    });
+    }

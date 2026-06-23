@@ -843,3 +843,42 @@ input[type="text"]:focus {
   width: 100%;
   margin-top: 8px;
 }
+
+
+/* ── MANHUNT PANEL ─────────────────────────────────── */
+
+#manhunt-panel {
+  position: fixed;
+  top: 300px;
+  right: 16px;
+  z-index: 30;
+
+  width: 220px;
+
+  background: rgba(255,255,255,0.96);
+  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  padding: 14px;
+
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+#manhunt-panel h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+#manhunt-status {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+#manhunt-hint {
+  color: #52525b;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+#btn-manhunt-caught {
+  width: 100%;
+}
