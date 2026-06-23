@@ -906,7 +906,9 @@ function checkManhuntCaught() {
 
     if (distance <= catchRadiusMeters) {
 
-    alert(`🏆 Hider caught! Distance: ${Math.round(distance)} m`);
+    alert(`🏆 Hider caught! +100 pts! Distance: ${Math.round(distance)} m`);
+
+    saveManhuntScore(hunterLat, hunterLng);
 
     endManhunt();
 
@@ -917,6 +919,35 @@ function checkManhuntCaught() {
   }, (err) => {
     alert('GPS error: ' + err.message);
   });
+}
+
+
+async function saveManhuntScore(lat, lng) {
+  const lobby = JSON.parse(
+    sessionStorage.getItem('geostickrs_lobby')
+  );
+
+  if (!lobby) return;
+
+  const username = 'Manhunt Winner';
+
+  const { error } = await supabase
+    .from('stickers')
+    .insert([{
+      username,
+      lat,
+      lng,
+      photo_url: null,
+      score: 100,
+      lobby: lobby.name,
+    }]);
+
+  if (error) {
+    console.error('Error saving Manhunt score:', error);
+    return;
+  }
+
+  loadLeaderboard();
 }
 
 
