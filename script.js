@@ -940,6 +940,7 @@ async function saveManhuntScore(lat, lng) {
       photo_url: null,
       score: 100,
       lobby: lobby.name,
+      mode: 'manhunt'
     }]);
 
   if (error) {

@@ -229,7 +229,10 @@ document.getElementById('btn-confirm-submit').addEventListener('click', async ()
       photo_url: photoURL,
       score,
       lobby:     currentLobby.name,
+      mode:      'classic'
     }]);
+
+
     if (insertError) throw insertError;
 
     const savedLat = submission.lat;
@@ -324,25 +327,65 @@ export async function loadLeaderboard() {
   if (!list) return;
   list.innerHTML = '<li class="loading">Loading…</li>';
 
-  const { data, error } = await supabase
-    .from('stickers')
-    .select('username, score')
-    .eq('lobby', currentLobby.name)
-    .order('score', { ascending: false });
+  let query = supabase
+  .from('stickers')
+  .select('username, score, mode')
+  .eq('lobby', currentLobby.name);
+
+if (mode === 'classic') {
+  query = query.eq('mode', 'classic');
+}
+
+if (mode === 'manhunt') {
+  query = query.eq('mode', 'manhunt');
+}
+
+if (mode === 'treasure') {
+  query = query.eq('mode', 'treasure');
+}
+
+const { data, error } = await query.order('score', { ascending: false });
 
   if (error || !data) return;
 
   let entries = [];
-  if (mode === 'top') {
-    entries = data.slice(0, 5);
-  } else {
-    const totals = {};
-    data.forEach(s => { totals[s.username] = (totals[s.username] || 0) + s.score; });
-    entries = Object.entries(totals)
-      .map(([username, score]) => ({ username, score }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-  }
+
+
+ if (mode === 'classic' ||
+    mode === 'manhunt' ||
+    mode === 'treasure') {
+
+  const totals = {};
+
+  data.forEach(s => {
+    totals[s.username] =
+      (totals[s.username] || 0) + s.score;
+  });
+
+  entries = Object.entries(totals)
+    .map(([username, score]) => ({ username, score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+} else {
+
+  // TOTAL SCORE
+
+  const totals = {};
+
+  data.forEach(s => {
+    totals[s.username] =
+      (totals[s.username] || 0) + s.score;
+  });
+
+  entries = Object.entries(totals)
+    .map(([username, score]) => ({ username, score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+}
+
+
+
 
   list.innerHTML = entries.length === 0
     ? '<li class="loading">No stickers yet!</li>'
