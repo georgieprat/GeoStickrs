@@ -206,12 +206,8 @@ function initAdminPanel() {
   });
 
   document.getElementById('btn-admin-manhunt')?.addEventListener('click', () => {
-
-    document.getElementById('admin-card').style.display = 'none';
-
-    document.getElementById('manhunt-admin-panel').style.display = 'block';
-
-  });
+  document.getElementById('manhunt-admin-panel').style.display = 'block';
+});
 
 
 
@@ -224,12 +220,8 @@ function initAdminPanel() {
   });
 
   document.getElementById('btn-manhunt-back')?.addEventListener('click', () => {
-
   document.getElementById('manhunt-admin-panel').style.display = 'none';
-
-  document.getElementById('admin-card').style.display = 'block';
-
-  });
+});
 
 
 
