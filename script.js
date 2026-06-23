@@ -61,6 +61,7 @@ function initMap() {
   loadAllStickers();
   loadLeaderboard();
   loadTreasureHuntFromSupabase();
+  loadManhuntFromSupabase();
 }
 
 // ── ENTER APP ────────────────────────────────────────
@@ -774,3 +775,70 @@ async function startManhunt() {
       alert('GPS ERROR: ' + err.message);
     });
     }
+
+
+    async function loadManhuntFromSupabase() {
+  const lobby = JSON.parse(
+    sessionStorage.getItem('geostickrs_lobby')
+  );
+
+  if (!lobby || !map) return;
+
+  const { data, error } = await supabase
+    .from('manhunts')
+    .select('*')
+    .eq('lobby', lobby.name)
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error loading Manhunt:', error);
+    return;
+  }
+
+  if (!data) {
+    console.log('No active Manhunt found.');
+    return;
+  }
+
+  console.log('Active Manhunt loaded:', data);
+
+  activeManhunt = data;
+  showManhuntOnMap(data);
+}
+
+
+function showManhuntOnMap(manhunt) {
+  if (!map || !manhunt?.box_geojson) return;
+
+  const box = manhunt.box_geojson;
+
+  if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) {
+    map.removeLayer(manhuntBoxLayer);
+  }
+
+  const bounds = [
+    [box.south, box.west],
+    [box.north, box.east]
+  ];
+
+  manhuntBoxLayer = L.rectangle(bounds, {
+    color: '#ef4444',
+    weight: 2,
+    fillColor: '#ef4444',
+    fillOpacity: 0.12,
+    dashArray: '8, 6'
+  }).addTo(map);
+
+  map.fitBounds(bounds);
+
+  const panel = document.getElementById('manhunt-panel');
+  const status = document.getElementById('manhunt-status');
+  const hint = document.getElementById('manhunt-hint');
+
+  if (panel) panel.style.display = 'block';
+  if (status) status.textContent = 'Active manhunt running';
+  if (hint) hint.textContent = 'Search inside the red area. Find the hider and press Caught!';
+}
