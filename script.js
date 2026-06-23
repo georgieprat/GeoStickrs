@@ -229,6 +229,10 @@ function initAdminPanel() {
   document.getElementById('btn-admin-endhunt')?.addEventListener('click', () => {
   endTreasureHunt();
 });
+
+  document.getElementById('btn-admin-stop-manhunt')?.addEventListener('click', () => {
+  endManhunt();
+});
 }
 
 window.addEventListener('load', initAdminPanel);
@@ -895,4 +899,36 @@ function checkManhuntCaught() {
   }, (err) => {
     alert('GPS error: ' + err.message);
   });
+}
+
+
+async function endManhunt() {
+
+  const lobby = JSON.parse(
+    sessionStorage.getItem('geostickrs_lobby')
+  );
+
+  if (!lobby) return;
+
+  const { error } = await supabase
+    .from('manhunts')
+    .update({ active: false })
+    .eq('lobby', lobby.name)
+    .eq('active', true);
+
+  if (error) {
+    console.error(error);
+    alert('Failed to end manhunt.');
+    return;
+  }
+
+  if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) {
+    map.removeLayer(manhuntBoxLayer);
+  }
+
+  activeManhunt = null;
+
+  document.getElementById('manhunt-panel').style.display = 'none';
+
+  alert('🛑 Manhunt ended.');
 }
