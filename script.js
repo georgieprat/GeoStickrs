@@ -894,6 +894,8 @@ function checkManhuntCaught() {
   navigator.geolocation.getCurrentPosition((pos) => {
     const hunterLat = pos.coords.latitude;
     const hunterLng = pos.coords.longitude;
+    const winnerName =
+    localStorage.getItem('geostickrs_username') || 'Hunter';
 
     const distance = map.distance(
       [hunterLat, hunterLng],
@@ -903,8 +905,12 @@ function checkManhuntCaught() {
     const catchRadiusMeters = 50;
 
     if (distance <= catchRadiusMeters) {
-      alert(`🏆 Caught! Distance: ${Math.round(distance)} m`);
-    } else {
+
+    alert(`🏆 Hider caught! Distance: ${Math.round(distance)} m`);
+
+    endManhunt();
+
+  } else {
       alert(`❌ Not close enough. Distance: ${Math.round(distance)} m`);
     }
 
