@@ -2,10 +2,16 @@ import { supabase } from './supabase.js';
 import { loadLeaderboard } from './submission.js';
 
 // ── STATE ────────────────────────────────────────────
-let map            = null;
-let activeManhunt  = null;
-let manhuntBoxLayer = null;
-let manhuntDraft   = null;
+let map              = null;
+let activeManhunt    = null;
+let manhuntBoxLayer  = null;
+let manhuntDraft     = null;
+let locationWatchId  = null;
+let seekerWatchId    = null;
+let seekerLat        = null;
+let seekerLng        = null;
+let lastLocationSent = 0;
+const LOCATION_INTERVAL_MS = 5000; // update box every 5 seconds max
 
 const MANHUNT_RADIUS_METERS = { small: 200, medium: 500, large: 1000 };
 
@@ -67,27 +73,121 @@ export async function startManhunt() {
       ? new Date(Date.now() + draft.durationMinutes * 60 * 1000).toISOString()
       : null;
 
-    const { error } = await supabase.from('manhunts').insert([{
-      lobby:      lobby.name,
-      active:     true,
-      hider_name: 'Hider',
-      hider_lat:  lat,
-      hider_lng:  lng,
+    const { data: inserted, error } = await supabase.from('manhunts').insert([{
+      lobby:       lobby.name,
+      active:      true,
+      hider_name:  'Hider',
+      hider_lat:   lat,
+      hider_lng:   lng,
       box_geojson: box,
-      expires_at: expiresAt,
-    }]);
+      expires_at:  expiresAt,
+    }]).select().single();
 
     if (error) { console.error(error); alert('Failed to start manhunt.'); return; }
 
-    manhuntDraft = null;
+    manhuntDraft  = null;
+    activeManhunt = inserted;
     updateManhuntButtons('stop');
-    await loadManhuntFromSupabase();
-    alert('🏃 Manhunt started.');
+    showManhuntOnMap(inserted, true);
+    startLocationTracking(inserted.id, draft.radiusMeters);
+    subscribeToManhuntUpdates();
+    startSeekerTracking();
+    alert('🏃 Manhunt started. Your location is now being tracked live.');
 
   }, (err) => {
     console.error('GPS ERROR:', err);
     alert('GPS ERROR: ' + err.message);
   });
+}
+
+// ── LIVE LOCATION TRACKING (Hider) ───────────────────
+function startLocationTracking(manhuntId, radiusMeters) {
+  if (!navigator.geolocation) return;
+
+  locationWatchId = navigator.geolocation.watchPosition((pos) => {
+    const now = Date.now();
+    if (now - lastLocationSent < LOCATION_INTERVAL_MS) return;
+    lastLocationSent = now;
+
+    const lat       = pos.coords.latitude;
+    const lng       = pos.coords.longitude;
+    const radiusDeg = radiusMeters / 111000;
+    const box       = {
+      south: lat - radiusDeg, north: lat + radiusDeg,
+      west:  lng - radiusDeg, east:  lng + radiusDeg,
+    };
+
+    supabase.from('manhunts')
+      .update({ hider_lat: lat, hider_lng: lng, box_geojson: box })
+      .eq('id', manhuntId)
+      .then(({ error }) => { if (error) console.error('Location update error:', error); });
+
+    if (activeManhunt) {
+      activeManhunt.hider_lat  = lat;
+      activeManhunt.hider_lng  = lng;
+      activeManhunt.box_geojson = box;
+    }
+  }, (err) => console.error('GPS watch error:', err), {
+    enableHighAccuracy: true,
+    maximumAge:         0,
+  });
+}
+
+// ── DISTANCE DISPLAY ─────────────────────────────────
+function updateDistanceDisplay() {
+  if (seekerLat === null || !activeManhunt?.hider_lat) return;
+  const dist = map.distance(
+    [seekerLat, seekerLng],
+    [activeManhunt.hider_lat, activeManhunt.hider_lng]
+  );
+  const el = document.getElementById('manhunt-distance');
+  if (!el) return;
+  const label = dist < 1000
+    ? `📍 ~${Math.round(dist)} m vom Hider`
+    : `📍 ~${(dist / 1000).toFixed(1)} km vom Hider`;
+  el.textContent = label;
+}
+
+// ── SEEKER LIVE POSITION ──────────────────────────────
+function startSeekerTracking() {
+  if (!navigator.geolocation) return;
+  seekerWatchId = navigator.geolocation.watchPosition((pos) => {
+    seekerLat = pos.coords.latitude;
+    seekerLng = pos.coords.longitude;
+    updateDistanceDisplay();
+  }, (err) => console.error('Seeker GPS error:', err), {
+    enableHighAccuracy: true,
+    maximumAge: 5000,
+  });
+}
+
+// ── REALTIME SUBSCRIPTION (Seekers) ──────────────────
+function subscribeToManhuntUpdates() {
+  if (!activeManhunt) return;
+
+  supabase
+    .channel('manhunt-live-' + activeManhunt.id)
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'manhunts',
+      filter: `id=eq.${activeManhunt.id}`,
+    }, payload => {
+      const updated = payload.new;
+      if (!updated.active) {
+        if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) map.removeLayer(manhuntBoxLayer);
+        document.getElementById('manhunt-panel').style.display = 'none';
+        document.getElementById('manhunt-distance').textContent = '';
+        stopSeekerTracking();
+        activeManhunt = null;
+        updateManhuntButtons('create');
+        return;
+      }
+      activeManhunt = { ...activeManhunt, ...updated };
+      showManhuntOnMap(updated, false);
+      updateDistanceDisplay();
+    })
+    .subscribe();
 }
 
 // ── LOAD FROM SUPABASE ───────────────────────────────
@@ -109,30 +209,40 @@ export async function loadManhuntFromSupabase() {
 
   activeManhunt = data;
   updateManhuntButtons('stop');
-  showManhuntOnMap(data);
+  showManhuntOnMap(data, true);
+  subscribeToManhuntUpdates();
+  startSeekerTracking();
+}
+
+function stopSeekerTracking() {
+  if (seekerWatchId !== null) {
+    navigator.geolocation.clearWatch(seekerWatchId);
+    seekerWatchId = null;
+  }
+  seekerLat = null;
+  seekerLng = null;
 }
 
 // ── SHOW ON MAP ──────────────────────────────────────
-function showManhuntOnMap(manhunt) {
+function showManhuntOnMap(manhunt, panToBox = false) {
   if (!map || !manhunt?.box_geojson) return;
 
-  const box = manhunt.box_geojson;
+  const box    = manhunt.box_geojson;
+  const bounds = [[box.south, box.west], [box.north, box.east]];
 
   if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) {
     map.removeLayer(manhuntBoxLayer);
   }
-
-  const bounds = [[box.south, box.west], [box.north, box.east]];
 
   manhuntBoxLayer = L.rectangle(bounds, {
     color: '#ef4444', weight: 2,
     fillColor: '#ef4444', fillOpacity: 0.12, dashArray: '8, 6',
   }).addTo(map);
 
-  map.fitBounds(bounds);
+  if (panToBox) map.fitBounds(bounds);
 
   document.getElementById('manhunt-panel').style.display = 'block';
-  document.getElementById('manhunt-status').textContent  = 'Active manhunt running';
+  document.getElementById('manhunt-status').textContent  = 'Active manhunt — live tracking';
   document.getElementById('manhunt-hint').textContent    = 'Search inside the red area. Find the hider and press Caught!';
 }
 
@@ -193,10 +303,17 @@ export async function endManhunt() {
     map.removeLayer(manhuntBoxLayer);
   }
 
+  if (locationWatchId !== null) {
+    navigator.geolocation.clearWatch(locationWatchId);
+    locationWatchId = null;
+  }
+  stopSeekerTracking();
+
   activeManhunt = null;
   manhuntDraft  = null;
 
-  document.getElementById('manhunt-panel').style.display = 'none';
+  document.getElementById('manhunt-panel').style.display   = 'none';
+  document.getElementById('manhunt-distance').textContent  = '';
   updateManhuntButtons('create');
   alert('🛑 Manhunt ended.');
 }
