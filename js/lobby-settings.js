@@ -26,9 +26,11 @@ export async function renameLobby() {
   if (error) { alert('Error: ' + error.message); return; }
 
   // Cascade rename to all related tables
-  await supabase.from('stickers')       .update({ lobby: newName }).eq('lobby', oldName);
-  await supabase.from('manhunts')       .update({ lobby: newName }).eq('lobby', oldName);
-  await supabase.from('treasure_hunts') .update({ lobby: newName }).eq('lobby', oldName);
+  await supabase.from('stickers')            .update({ lobby: newName }).eq('lobby', oldName);
+  await supabase.from('manhunts')            .update({ lobby: newName }).eq('lobby', oldName);
+  await supabase.from('treasure_hunts')      .update({ lobby: newName }).eq('lobby', oldName);
+  await supabase.from('landmark_hunts')      .update({ lobby: newName }).eq('lobby', oldName);
+  await supabase.from('landmark_submissions').update({ lobby: newName }).eq('lobby', oldName);
 
   lobby.name = newName;
   sessionStorage.setItem('geostickrs_lobby', JSON.stringify(lobby));

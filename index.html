@@ -207,55 +207,45 @@
 <div id="admin-panel" style="display:none;">
   <div id="admin-card">
     <div id="treasure-panel" style="display:none;">
-
       <div class="admin-section">
-        <h3>🏛️ Landmark Hunt Manager</h3>
+        <h3>🏛️ Landmark Sticker Hunt</h3>
 
+        <!-- Create phase -->
+        <div id="lsh-create-form">
+          <label for="lsh-hint-1">Hint 1 *</label>
+          <input type="text" id="lsh-hint-1" class="admin-input" placeholder="z.B. Resselpark, near TU Hauptgebäude" autocomplete="off">
 
-        <label for="treasure-checkpoint-count">Number of checkpoints</label>
-        <input
-          id="treasure-checkpoint-count"
-          type="number"
-          min="1"
-          max="20"
-          value="3"
-          class="admin-select"
-        >
+          <label for="lsh-hint-2">Hint 2 (optional)</label>
+          <input type="text" id="lsh-hint-2" class="admin-input" placeholder="Additional hint…" autocomplete="off">
 
-        <label for="treasure-duration">Duration</label>
-        <select id="treasure-duration" class="admin-select">
-          <option value="15">15 minutes</option>
-          <option value="30">30 minutes</option>
-          <option value="60" selected>1 hour</option>
-          <option value="120">2 hours</option>
-          <option value="0">No time limit</option>
-        </select>
+          <label for="lsh-hint-3">Hint 3 (optional)</label>
+          <input type="text" id="lsh-hint-3" class="admin-input" placeholder="Additional hint…" autocomplete="off">
 
+          <button class="admin-action" id="btn-lsh-post">
+            📍 Post Hidden Sticker
+          </button>
+        </div>
 
-        <button class="admin-action" id="btn-treasure-create">
-          ➕ Create Landmark Hunt
-        </button>
+        <!-- Active phase -->
+        <div id="lsh-active-form" style="display:none;">
+          <p style="color:#16a34a;font-weight:600;margin-bottom:8px;">✅ Hunt is active!</p>
+          <button class="admin-action" id="btn-lsh-review-submissions">
+            📋 Review Submissions
+          </button>
+          <button class="admin-action admin-action-danger" id="btn-lsh-stop">
+            🛑 End Hunt
+          </button>
+        </div>
 
-        <button class="admin-action"
-                id="btn-treasure-edit"
-                style="display:none;">
-          ✏️ Edit Landmark Hunt
-        </button>
+        <!-- Landmark submissions review -->
+        <div id="lsh-review-panel" style="display:none;">
+          <h3>🔍 Landmark Submissions</h3>
+          <div id="lsh-review-list"></div>
+          <button class="admin-action" id="btn-lsh-review-close">← Back</button>
+        </div>
 
-        <button class="admin-action" id="btn-treasure-start" style="display:none;">
-          ▶ Start Landmark Hunt
-        </button>
-
-        <button class="admin-action" id="btn-treasure-stop" style="display:none;">
-          ❌ End Landmark Hunt
-        </button>
-
-        <button class="admin-action" id="btn-treasure-back">
-          ← Back
-        </button>
-
+        <button class="admin-action" id="btn-treasure-back">← Back</button>
       </div>
-
     </div>
     <div class="admin-header">
       <div>
@@ -383,45 +373,47 @@
 </div>
 
 
-<!-- ACTIVE HUNT BADGE -->
-<div id="hunt-badge" style="display:none;">
-  <strong>🏛️ Landmark Hunt</strong>
-  <span id="hunt-timer">Loading…</span>
-</div>
-
+<!-- LANDMARK STICKER HUNT PLAYER PANEL -->
 <div id="landmark-panel" style="display:none;">
   <div class="game-panel-header">
     <span class="game-panel-icon">🏛️</span>
     <div>
-      <h3>Landmark Hunt</h3>
-      <span id="landmark-progress" class="game-panel-subtitle">Hint 1</span>
+      <h3>Landmark Sticker Hunt</h3>
+      <span class="game-panel-subtitle">Find the hidden sticker!</span>
     </div>
   </div>
   <div class="game-panel-hint-box">
-    <p id="landmark-current-hint">Waiting for hint...</p>
+    <p id="landmark-current-hint">Loading hint…</p>
+    <p id="landmark-hint-2" style="display:none;margin-top:6px;"></p>
+    <p id="landmark-hint-3" style="display:none;margin-top:6px;"></p>
   </div>
-  <p id="landmark-max-score" class="game-panel-score">Max Score: 500 pts</p>
-  <button id="btn-landmark-guess" class="btn-primary game-panel-btn">
-    🎯 Guess Location
+  <button id="btn-lsh-found" class="btn-primary game-panel-btn">
+    🔍 I think I found it!
   </button>
 </div>
 
-
-<!-- CHECKPOINT HINT MODAL -->
-<div id="hint-modal" style="display:none;">
-  <div id="hint-card">
-    <h3>Checkpoint Hint</h3>
-
-    <input
-      type="text"
-      id="checkpoint-hint-input"
-      placeholder="Enter hint..."
-      autocomplete="off"
-    >
-
-    <button id="btn-save-hint" class="btn-primary">
-      Save Hint
-    </button>
+<!-- FOUND MODAL (player photo submission) -->
+<div id="lsh-found-modal" style="display:none;">
+  <div class="step-card">
+    <div class="step-header">
+      <span class="step-icon">🔍</span>
+      <h2>Found it!</h2>
+      <p>Take a photo of the sticker as proof</p>
+    </div>
+    <div id="lsh-photo-preview-wrap" style="display:none;">
+      <img id="lsh-photo-preview" alt="Preview">
+    </div>
+    <div class="camera-buttons">
+      <button id="btn-lsh-camera" class="btn-secondary">📷 Take photo</button>
+      <button id="btn-lsh-upload" class="btn-secondary">🖼 Upload image</button>
+    </div>
+    <input type="file" id="lsh-camera-input" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="lsh-file-input-found" accept="image/*" style="display:none;">
+    <p id="lsh-submit-status" style="font-size:13px;color:#52525b;margin-top:8px;"></p>
+    <div class="step-actions">
+      <button id="btn-lsh-found-cancel" class="btn-secondary">Cancel</button>
+      <button id="btn-lsh-submit" class="btn-primary" disabled>Submit 🚀</button>
+    </div>
   </div>
 </div>
 

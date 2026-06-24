@@ -1,8 +1,8 @@
 import { supabase } from './supabase.js';
 import { loadLeaderboard } from './submission.js';
 import {
-  startTreasureHuntCreator, startPreparedTreasureHunt, endTreasureHunt,
-  updateLandmarkHuntButtons,
+  postLandmarkSticker, endLandmarkHunt,
+  loadLandmarkSubmissions, approveLandmarkSubmission, rejectLandmarkSubmission,
 } from './landmark.js';
 import { createManhuntDraft, startManhunt, endManhunt } from './manhunt.js';
 import {
@@ -35,17 +35,22 @@ function initAdminPanel() {
     if (e.target === adminPanel) adminPanel.style.display = 'none';
   });
 
-  // ── Landmark Hunt ────────────────────────────────
+  // ── Landmark Sticker Hunt ─────────────────────────
   document.getElementById('btn-admin-treasure')?.addEventListener('click', () => {
     document.getElementById('treasure-panel').style.display = 'block';
   });
   document.getElementById('btn-treasure-back')?.addEventListener('click', () => {
     document.getElementById('treasure-panel').style.display = 'none';
   });
-  document.getElementById('btn-treasure-create')?.addEventListener('click', startTreasureHuntCreator);
-  document.getElementById('btn-treasure-start')?.addEventListener('click',  startPreparedTreasureHunt);
-  document.getElementById('btn-treasure-stop')?.addEventListener('click',   endTreasureHunt);
-  document.getElementById('btn-admin-endhunt')?.addEventListener('click',   endTreasureHunt);
+  document.getElementById('btn-lsh-post')?.addEventListener('click', postLandmarkSticker);
+  document.getElementById('btn-lsh-stop')?.addEventListener('click', endLandmarkHunt);
+  document.getElementById('btn-lsh-review-submissions')?.addEventListener('click', () => {
+    document.getElementById('lsh-review-panel').style.display = 'block';
+    loadLandmarkSubmissions();
+  });
+  document.getElementById('btn-lsh-review-close')?.addEventListener('click', () => {
+    document.getElementById('lsh-review-panel').style.display = 'none';
+  });
 
   // ── Manhunt ──────────────────────────────────────
   document.getElementById('btn-admin-manhunt')?.addEventListener('click', () => {
@@ -155,17 +160,30 @@ async function loadReviewPanel() {
 }
 
 document.addEventListener('click', async (e) => {
-  if (!e.target.classList.contains('delete-sticker-btn')) return;
+  if (e.target.classList.contains('delete-sticker-btn')) {
+    const stickerId = e.target.dataset.id;
+    if (!confirm('Delete this sticker?')) return;
+    const { error } = await supabase.from('stickers').delete().eq('id', stickerId);
+    if (error) { alert('Failed to delete sticker.'); return; }
+    alert('Sticker deleted.');
+    loadReviewPanel();
+    loadLeaderboard();
+    return;
+  }
 
-  const stickerId = e.target.dataset.id;
-  if (!confirm('Delete this sticker?')) return;
+  if (e.target.classList.contains('lsh-approve-btn')) {
+    const id = e.target.dataset.id;
+    if (!confirm('Approve this submission?')) return;
+    await approveLandmarkSubmission(id);
+    return;
+  }
 
-  const { error } = await supabase.from('stickers').delete().eq('id', stickerId);
-  if (error) { alert('Failed to delete sticker.'); return; }
-
-  alert('Sticker deleted.');
-  loadReviewPanel();
-  loadLeaderboard();
+  if (e.target.classList.contains('lsh-reject-btn')) {
+    const id = e.target.dataset.id;
+    if (!confirm('Reject this submission?')) return;
+    await rejectLandmarkSubmission(id);
+    return;
+  }
 });
 
 // ── BOOT ─────────────────────────────────────────────

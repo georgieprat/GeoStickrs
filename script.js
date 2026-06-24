@@ -5,12 +5,7 @@ import './js/lobby.js';
 import './js/admin.js';
 import { init, loadAllStickers, loadLeaderboard, submission, placePreviewMarker } from './js/submission.js';
 import { initManhunt,      loadManhuntFromSupabase }       from './js/manhunt.js';
-import {
-  initLandmark, loadTreasureHuntFromSupabase,
-  getTreasureHuntDraft, handleTreasureHuntClick,
-  isLandmarkGuessMode,  handleLandmarkGuess,
-  getTreasureHuntStorageKey, checkTreasureHuntProgress,
-} from './js/landmark.js';
+import { initLandmark, loadActiveLandmarkHunt } from './js/landmark.js';
 import {
   initLobbySettings, isHomePickerActive, saveNewHomeLocation,
 } from './js/lobby-settings.js';
@@ -44,20 +39,6 @@ function initMap() {
       return;
     }
 
-    if (isLandmarkGuessMode()) {
-      handleLandmarkGuess(lat, lng);
-      return;
-    }
-
-    if (getTreasureHuntDraft()) {
-      handleTreasureHuntClick(lat, lng);
-      return;
-    }
-
-    if (localStorage.getItem(getTreasureHuntStorageKey())) {
-      checkTreasureHuntProgress(lat, lng);
-    }
-
     // Normal sticker placement
     submission.lat = lat;
     submission.lng = lng;
@@ -72,7 +53,7 @@ function initMap() {
 
   loadAllStickers();
   loadLeaderboard();
-  loadTreasureHuntFromSupabase();
+  loadActiveLandmarkHunt();
   loadManhuntFromSupabase();
 }
 

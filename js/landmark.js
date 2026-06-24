@@ -1,304 +1,184 @@
 import { supabase } from './supabase.js';
 
-// ── STATE ────────────────────────────────────────────
-let map                      = null;
-let treasureHuntDraft        = null;
-let treasureHuntStep         = 0;
-let treasureHuntMarkers      = [];
-let pendingCheckpoint        = null;
-let treasureHuntCheckpointCount = 3;
-let huntTimerInterval        = null;
-let activePlayerHunt         = null;
-let landmarkGuessMode        = false;
+// ── STATE ─────────────────────────────────────────────
+let map                = null;
+let activeLandmarkHunt = null;
+let foundPhotoFile     = null;
+let foundPhotoDataUrl  = null;
 
-// ── INIT ─────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────
 export function initLandmark(mapInstance) {
   map = mapInstance;
 
-  document.getElementById('btn-landmark-guess')
-    ?.addEventListener('click', () => {
-      landmarkGuessMode = true;
-      alert('🎯 Guess Mode enabled.\n\nClick on the map to place your guess.');
+  document.getElementById('btn-lsh-found')?.addEventListener('click', openFoundModal);
+  document.getElementById('btn-lsh-found-cancel')?.addEventListener('click', closeFoundModal);
+
+  document.getElementById('btn-lsh-camera')?.addEventListener('click', () => {
+    document.getElementById('lsh-camera-input').click();
+  });
+  document.getElementById('btn-lsh-upload')?.addEventListener('click', () => {
+    document.getElementById('lsh-file-input-found').click();
+  });
+
+  ['lsh-camera-input', 'lsh-file-input-found'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      foundPhotoFile    = file;
+      const reader      = new FileReader();
+      reader.onload     = ev => {
+        foundPhotoDataUrl = ev.target.result;
+        document.getElementById('lsh-photo-preview').src = ev.target.result;
+        document.getElementById('lsh-photo-preview-wrap').style.display = 'block';
+        document.getElementById('btn-lsh-submit').disabled = false;
+      };
+      reader.readAsDataURL(file);
     });
+  });
 
-  initHintModal();
+  document.getElementById('btn-lsh-submit')?.addEventListener('click', submitFound);
 }
 
-// Getters for map click handler in script.js
-export const getTreasureHuntDraft    = () => treasureHuntDraft;
-export const isLandmarkGuessMode     = () => landmarkGuessMode;
+// Kept for script.js compat — new flow is GPS-based, no map clicks needed
+export const getTreasureHuntDraft       = () => null;
+export const isLandmarkGuessMode        = () => false;
+export const getTreasureHuntStorageKey  = () => null;
+export const checkTreasureHuntProgress  = () => {};
+export const handleTreasureHuntClick    = () => {};
+export const handleLandmarkGuess        = () => {};
 
-// ── STORAGE KEY ──────────────────────────────────────
-export function getTreasureHuntStorageKey() {
-  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-  return `geostickrs_treasure_hunt_${lobby?.name ?? 'default'}`;
-}
+// ── ADMIN: Post Hidden Sticker ────────────────────────
+export async function postLandmarkSticker() {
+  const hints = [1, 2, 3]
+    .map(i => document.getElementById(`lsh-hint-${i}`)?.value.trim())
+    .filter(Boolean);
 
-// ── BUTTON STATE ─────────────────────────────────────
-export function updateLandmarkHuntButtons(state) {
-  const create = document.getElementById('btn-treasure-create');
-  const start  = document.getElementById('btn-treasure-start');
-  const stop   = document.getElementById('btn-treasure-stop');
-  if (!create || !start || !stop) return;
-  create.style.display = state === 'create' ? 'block' : 'none';
-  start.style.display  = state === 'start'  ? 'block' : 'none';
-  stop.style.display   = state === 'stop'   ? 'block' : 'none';
-}
+  if (hints.length === 0) { alert('Please add at least one hint.'); return; }
+  if (!navigator.geolocation) { alert('GPS not available on this device.'); return; }
 
-// ── CREATE ───────────────────────────────────────────
-export function startTreasureHuntCreator() {
-  document.getElementById('admin-panel').style.display = 'none';
+  const btn = document.getElementById('btn-lsh-post');
+  btn.disabled    = true;
+  btn.textContent = '📡 Getting GPS…';
 
-  const selectedCount = Number(document.getElementById('treasure-checkpoint-count')?.value);
-  treasureHuntCheckpointCount = Number.isInteger(selectedCount) && selectedCount > 0 ? selectedCount : 3;
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+    const { data, error } = await supabase.from('landmark_hunts').insert([{
+      lobby:  lobby.name,
+      active: true,
+      lat:    pos.coords.latitude,
+      lng:    pos.coords.longitude,
+      hints,
+    }]).select().single();
 
-  const durationMinutes = Number(document.getElementById('treasure-duration')?.value ?? 60);
-  const expiresAt = durationMinutes > 0
-    ? new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
-    : null;
+    btn.disabled    = false;
+    btn.textContent = '📍 Post Hidden Sticker';
 
-  treasureHuntDraft = {
-    name: 'Treasure Hunt',
-    checkpoints: [],
-    checkpointCount: treasureHuntCheckpointCount,
-    treasure: null,
-    createdAt: new Date().toISOString(),
-    expiresAt,
-    active: false,
-  };
+    if (error) { alert('Error: ' + error.message); return; }
 
-  treasureHuntStep = 0;
-  alert(`Treasure Hunt Creator started. Click on the map to set Checkpoint 1 of ${treasureHuntCheckpointCount}.`);
-}
-
-// ── MAP CLICK HANDLER ────────────────────────────────
-export function handleTreasureHuntClick(lat, lng) {
-  if (!map || !treasureHuntDraft) return;
-
-  if (treasureHuntStep < treasureHuntCheckpointCount) {
-    pendingCheckpoint = { lat, lng };
-    document.getElementById('checkpoint-hint-input').value = '';
-    document.getElementById('hint-modal').style.display = 'flex';
-    return;
-  }
-
-  // Place treasure
-  treasureHuntDraft.treasure = { lat, lng };
-
-  const marker = L.marker([lat, lng]).addTo(map).bindPopup('🏆 Treasure').openPopup();
-  treasureHuntMarkers.push(marker);
-
-  localStorage.setItem(getTreasureHuntStorageKey(), JSON.stringify(treasureHuntDraft));
-  saveTreasureHuntToSupabase(treasureHuntDraft);
-
-  alert('🏛️ Landmark Hunt created! You can now start it.');
-  updateLandmarkHuntButtons('start');
-
-  treasureHuntDraft = null;
-  treasureHuntStep  = 0;
-}
-
-// ── HINT MODAL ───────────────────────────────────────
-function initHintModal() {
-  const saveButton = document.getElementById('btn-save-hint');
-  if (!saveButton) return;
-
-  saveButton.addEventListener('click', () => {
-    if (!pendingCheckpoint || !treasureHuntDraft) return;
-
-    const hintInput = document.getElementById('checkpoint-hint-input');
-    const hint = hintInput.value.trim() || `Hint Level ${treasureHuntStep + 1}`;
-
-    treasureHuntDraft.checkpoints.push({
-      lat: pendingCheckpoint.lat,
-      lng: pendingCheckpoint.lng,
-      hint,
-    });
-
-    const marker = L.marker([pendingCheckpoint.lat, pendingCheckpoint.lng])
-      .addTo(map)
-      .bindPopup(`<strong>Hint ${treasureHuntStep + 1}</strong><br>${hint}`)
-      .openPopup();
-
-    treasureHuntMarkers.push(marker);
-    pendingCheckpoint = null;
-    document.getElementById('hint-modal').style.display = 'none';
-    treasureHuntStep++;
-
-    if (treasureHuntStep < treasureHuntCheckpointCount) {
-      alert(`Hint ${treasureHuntStep} saved. Set Hint ${treasureHuntStep + 1}.`);
-    } else {
-      alert(`Checkpoint ${treasureHuntCheckpointCount} saved. Now place the Treasure.`);
-    }
+    activeLandmarkHunt = data;
+    showAdminActivePhase();
+    showPlayerPanel(data);
+    alert('✅ Landmark Sticker Hunt posted! Players can now search.');
+  }, err => {
+    btn.disabled    = false;
+    btn.textContent = '📍 Post Hidden Sticker';
+    alert('GPS error: ' + err.message);
   });
 }
 
-// ── START ────────────────────────────────────────────
-export function startPreparedTreasureHunt() {
-  const saved = localStorage.getItem(getTreasureHuntStorageKey());
-  if (!saved) { alert('No Treasure Hunt created yet.'); return; }
+// ── ADMIN: End Hunt ───────────────────────────────────
+export async function endLandmarkHunt() {
+  if (!activeLandmarkHunt) return;
+  if (!confirm('End the Landmark Sticker Hunt?')) return;
 
-  const hunt = JSON.parse(saved);
+  const { error } = await supabase
+    .from('landmark_hunts')
+    .update({ active: false })
+    .eq('id', activeLandmarkHunt.id);
 
-  if (!hunt.checkpoints || hunt.checkpoints.length < hunt.checkpointCount || !hunt.treasure) {
-    alert(`Treasure Hunt is incomplete. Please create ${hunt.checkpointCount} checkpoints and a treasure first.`);
-    return;
-  }
+  if (error) { alert('Error: ' + error.message); return; }
 
-  const durationMinutes = Number(document.getElementById('treasure-duration')?.value ?? 60);
-
-  hunt.active    = true;
-  hunt.startedAt = new Date().toISOString();
-  hunt.expiresAt = durationMinutes > 0
-    ? new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
-    : null;
-
-  localStorage.setItem(getTreasureHuntStorageKey(), JSON.stringify(hunt));
-  updateTreasureHuntInSupabase(hunt);
-  showHuntBadge(hunt);
-  alert('🏛️ Landmark Hunt started!');
-  updateLandmarkHuntButtons('stop');
-}
-
-// ── END ──────────────────────────────────────────────
-export function endTreasureHunt() {
-  localStorage.removeItem(getTreasureHuntStorageKey());
-
-  treasureHuntMarkers.forEach(m => { if (map?.hasLayer(m)) map.removeLayer(m); });
-  treasureHuntMarkers  = [];
-  treasureHuntDraft    = null;
-  treasureHuntStep     = 0;
-  activePlayerHunt     = null;
-  landmarkGuessMode    = false;
-
-  document.getElementById('hunt-badge').style.display    = 'none';
+  activeLandmarkHunt = null;
   document.getElementById('landmark-panel').style.display = 'none';
-  document.getElementById('landmark-progress').textContent      = '';
-  document.getElementById('landmark-current-hint').textContent  = '';
-  document.getElementById('landmark-max-score').textContent     = '';
-
-  updateLandmarkHuntButtons('create');
-  endTreasureHuntInSupabase();
-  alert('Landmark Hunt ended.');
+  document.getElementById('lsh-create-form').style.display  = 'block';
+  document.getElementById('lsh-active-form').style.display  = 'none';
+  [1, 2, 3].forEach(i => {
+    const el = document.getElementById(`lsh-hint-${i}`);
+    if (el) el.value = '';
+  });
+  alert('Landmark Sticker Hunt ended.');
 }
 
-// ── BADGE + TIMER ────────────────────────────────────
-function showHuntBadge(hunt) {
-  const badge = document.getElementById('hunt-badge');
-  const timer = document.getElementById('hunt-timer');
-  if (!badge || !timer || !hunt) return;
+// ── ADMIN: Load Submissions for Review ───────────────
+export async function loadLandmarkSubmissions() {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  const list  = document.getElementById('lsh-review-list');
+  if (!list) return;
+  list.innerHTML = 'Loading...';
 
-  badge.style.display = 'none';
-  showLandmarkPanel(hunt);
+  const { data, error } = await supabase
+    .from('landmark_submissions')
+    .select('*')
+    .eq('lobby', lobby.name)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
 
-  function updateTimer() {
-    if (!hunt.expiresAt) { timer.textContent = 'No time limit'; return; }
+  if (error) { list.innerHTML = 'Error loading submissions.'; return; }
+  if (!data.length) { list.innerHTML = '<p style="padding:8px">No pending submissions.</p>'; return; }
 
-    const remainingMs = new Date(hunt.expiresAt) - new Date();
-    if (remainingMs <= 0) {
-      timer.textContent = 'Expired';
-      badge.style.display = 'none';
-      localStorage.removeItem(getTreasureHuntStorageKey());
-      clearInterval(huntTimerInterval);
-      return;
-    }
+  list.innerHTML = data.map(s => `
+    <div class="review-card" data-sub-id="${s.id}">
+      <strong>${s.username}</strong><br>
+      📍 ${Number(s.lat).toFixed(4)}, ${Number(s.lng).toFixed(4)}<br>
+      ${s.photo_url
+        ? `<img src="${s.photo_url}" style="width:100%;max-width:200px;border-radius:8px;margin:8px 0;">`
+        : '<em>No photo</em>'}
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="lsh-approve-btn btn-primary"  data-id="${s.id}">✅ Approve</button>
+        <button class="lsh-reject-btn  btn-secondary" data-id="${s.id}">❌ Reject</button>
+      </div>
+    </div>
+  `).join('');
+}
 
-    const minutes = Math.floor(remainingMs / 60000);
-    const hours   = Math.floor(minutes / 60);
-    timer.textContent = hours > 0
-      ? `${hours}h ${minutes % 60}min remaining`
-      : `${minutes}min remaining`;
+export async function approveLandmarkSubmission(id) {
+  await supabase.from('landmark_submissions').update({ status: 'approved' }).eq('id', id);
+
+  const { data: sub } = await supabase
+    .from('landmark_submissions').select('*').eq('id', id).single();
+
+  if (sub) {
+    // score: 0 — scoring is handled by another team member
+    await supabase.from('stickers').insert([{
+      username:  sub.username,
+      lat:       sub.lat,
+      lng:       sub.lng,
+      photo_url: sub.photo_url,
+      score:     0,
+      lobby:     sub.lobby,
+      mode:      'landmark',
+    }]);
   }
 
-  updateTimer();
-  clearInterval(huntTimerInterval);
-  huntTimerInterval = setInterval(updateTimer, 1000);
+  alert('✅ Submission approved!');
+  loadLandmarkSubmissions();
 }
 
-// ── PLAYER PANEL ─────────────────────────────────────
-function showLandmarkPanel(hunt) {
-  const panel = document.getElementById('landmark-panel');
-  if (!panel || !hunt?.checkpoints?.length) return;
-
-  panel.style.display = 'block';
-  document.getElementById('landmark-progress').textContent     = 'Hint 1 / ' + hunt.checkpoints.length;
-  document.getElementById('landmark-current-hint').textContent = hunt.checkpoints[0].hint;
-  document.getElementById('landmark-max-score').textContent    = 'Max Score: 500 pts';
+export async function rejectLandmarkSubmission(id) {
+  const { error } = await supabase
+    .from('landmark_submissions').update({ status: 'rejected' }).eq('id', id);
+  if (error) { alert('Error: ' + error.message); return; }
+  alert('Submission rejected.');
+  loadLandmarkSubmissions();
 }
 
-// ── TREASURE HUNT PROGRESS (map click) ───────────────
-export function checkTreasureHuntProgress(lat, lng) {
-  const saved = localStorage.getItem(getTreasureHuntStorageKey());
-  if (!saved) return;
-
-  const hunt = JSON.parse(saved);
-  if (!hunt.active) return;
-
-  if (!activePlayerHunt) {
-    activePlayerHunt = { currentCheckpoint: 0, treasureUnlocked: false, completed: false };
-  }
-
-  if (activePlayerHunt.completed) return;
-
-  const radiusMeters = 50000;
-
-  if (!activePlayerHunt.treasureUnlocked) {
-    const checkpoint = hunt.checkpoints[activePlayerHunt.currentCheckpoint];
-    if (!checkpoint) return;
-
-    const distance = map.distance([lat, lng], [checkpoint.lat, checkpoint.lng]);
-
-    if (distance <= radiusMeters) {
-      activePlayerHunt.currentCheckpoint++;
-      if (activePlayerHunt.currentCheckpoint < hunt.checkpoints.length) {
-        alert(`✅ Checkpoint ${activePlayerHunt.currentCheckpoint} found!\n\nNext hint:\n${hunt.checkpoints[activePlayerHunt.currentCheckpoint].hint}`);
-      } else {
-        activePlayerHunt.treasureUnlocked = true;
-        alert('✅ All checkpoints found!\n\nNow find the treasure.');
-      }
-    } else {
-      alert('Not close enough. Keep searching!');
-    }
-    return;
-  }
-
-  const treasureDistance = map.distance([lat, lng], [hunt.treasure.lat, hunt.treasure.lng]);
-  if (treasureDistance <= radiusMeters) {
-    activePlayerHunt.completed = true;
-    alert('🏆 Treasure Hunt completed!');
-  } else {
-    alert('Treasure is not here. Keep searching!');
-  }
-}
-
-// ── LANDMARK GUESS ───────────────────────────────────
-export function handleLandmarkGuess(lat, lng) {
-  landmarkGuessMode = false;
-
-  const saved = localStorage.getItem(getTreasureHuntStorageKey());
-  if (!saved) { alert('No active Landmark Hunt.'); return; }
-
-  const hunt = JSON.parse(saved);
-  if (!hunt.treasure) { alert('No landmark configured.'); return; }
-
-  const distance = map.distance([lat, lng], [hunt.treasure.lat, hunt.treasure.lng]);
-
-  let score = 0;
-  if      (distance <= 1000)   score = 500;
-  else if (distance <= 10000)  score = 300;
-  else if (distance <= 50000)  score = 200;
-  else if (distance <= 200000) score = 100;
-
-  alert(`🎯 Guess submitted!\n\nDistance: ${Math.round(distance / 1000)} km\nScore: ${score} pts`);
-}
-
-// ── LOAD FROM SUPABASE ───────────────────────────────
-export async function loadTreasureHuntFromSupabase() {
+// ── PLAYER: Load Active Hunt on Startup ───────────────
+export async function loadActiveLandmarkHunt() {
   const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
   if (!lobby) return;
 
   const { data, error } = await supabase
-    .from('treasure_hunts')
+    .from('landmark_hunts')
     .select('*')
     .eq('lobby', lobby.name)
     .eq('active', true)
@@ -306,56 +186,108 @@ export async function loadTreasureHuntFromSupabase() {
     .limit(1)
     .maybeSingle();
 
-  if (error) { console.error('Error loading Treasure Hunt:', error); return; }
-  if (!data)  { console.log('No active Treasure Hunt found.'); return; }
+  if (error) { console.error(error); return; }
+  if (!data) return;
 
-  localStorage.setItem(getTreasureHuntStorageKey(), JSON.stringify(data.hunt_data));
-  updateLandmarkHuntButtons('stop');
+  activeLandmarkHunt = data;
+  showPlayerPanel(data);
+  showAdminActivePhase();
+}
 
-  const hunt = data.hunt_data;
-  if (!hunt.active) return;
-  if (hunt.expiresAt && new Date(hunt.expiresAt) < new Date()) {
-    localStorage.removeItem(getTreasureHuntStorageKey());
+// ── UI HELPERS ────────────────────────────────────────
+function showPlayerPanel(hunt) {
+  const panel = document.getElementById('landmark-panel');
+  if (!panel || !hunt) return;
+  panel.style.display = 'block';
+
+  const hints = Array.isArray(hunt.hints) ? hunt.hints : [];
+  document.getElementById('landmark-current-hint').textContent = hints[0] || 'Find the hidden sticker!';
+
+  const h2 = document.getElementById('landmark-hint-2');
+  const h3 = document.getElementById('landmark-hint-3');
+  if (h2) { h2.textContent = hints[1] || ''; h2.style.display = hints[1] ? 'block' : 'none'; }
+  if (h3) { h3.textContent = hints[2] || ''; h3.style.display = hints[2] ? 'block' : 'none'; }
+}
+
+function showAdminActivePhase() {
+  const cf = document.getElementById('lsh-create-form');
+  const af = document.getElementById('lsh-active-form');
+  if (cf) cf.style.display = 'none';
+  if (af) af.style.display = 'block';
+}
+
+// ── FOUND MODAL ───────────────────────────────────────
+function openFoundModal() {
+  if (!activeLandmarkHunt) {
+    alert('No active Landmark Sticker Hunt found.');
     return;
   }
-  showHuntBadge(hunt);
+  foundPhotoFile    = null;
+  foundPhotoDataUrl = null;
+  document.getElementById('lsh-photo-preview-wrap').style.display = 'none';
+  document.getElementById('btn-lsh-submit').disabled               = true;
+  document.getElementById('lsh-submit-status').textContent         = '';
+  document.getElementById('lsh-found-modal').style.display         = 'flex';
+  document.getElementById('map-overlay').classList.add('active');
 }
 
-// ── SUPABASE HELPERS ─────────────────────────────────
-async function saveTreasureHuntToSupabase(hunt) {
-  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-  if (!lobby || !hunt) return;
-
-  const { error } = await supabase.from('treasure_hunts').insert([{
-    lobby:      lobby.name,
-    active:     hunt.active,
-    expires_at: hunt.expiresAt,
-    hunt_data:  hunt,
-  }]);
-
-  if (error) console.error('Error saving Treasure Hunt:', error);
+function closeFoundModal() {
+  document.getElementById('lsh-found-modal').style.display = 'none';
+  document.getElementById('map-overlay').classList.remove('active');
 }
 
-async function updateTreasureHuntInSupabase(hunt) {
-  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-  if (!lobby || !hunt) return;
+async function submitFound() {
+  const lobby    = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  const username = lobby?.username;
+  if (!username) { alert('No username found. Please rejoin the lobby.'); return; }
+  if (!foundPhotoFile) { alert('Please take or upload a photo first.'); return; }
 
-  const { error } = await supabase
-    .from('treasure_hunts')
-    .update({ active: hunt.active, expires_at: hunt.expiresAt, hunt_data: hunt })
-    .eq('lobby', lobby.name);
+  const btn = document.getElementById('btn-lsh-submit');
+  btn.disabled    = true;
+  btn.textContent = '⏳ Submitting…';
+  document.getElementById('lsh-submit-status').textContent = '📡 Getting your GPS location…';
 
-  if (error) console.error('Error updating Treasure Hunt:', error);
-}
+  navigator.geolocation.getCurrentPosition(async pos => {
+    let photoUrl = null;
 
-async function endTreasureHuntInSupabase() {
-  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-  if (!lobby) return;
+    const lobbyFolder = lobby.name.replace(/\s+/g, '_').toLowerCase();
+    const fileName    = `${lobbyFolder}/lsh_${Date.now()}_${foundPhotoFile.name.replace(/\s/g, '_')}`;
+    const { error: uploadError } = await supabase.storage
+      .from('photos')
+      .upload(fileName, foundPhotoFile, { cacheControl: '3600', upsert: false });
 
-  const { error } = await supabase
-    .from('treasure_hunts')
-    .update({ active: false })
-    .eq('lobby', lobby.name);
+    if (uploadError) {
+      btn.disabled    = false;
+      btn.textContent = 'Submit 🚀';
+      document.getElementById('lsh-submit-status').textContent = 'Upload error: ' + uploadError.message;
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
+    photoUrl = urlData.publicUrl;
 
-  if (error) console.error('Error ending Treasure Hunt:', error);
+    const { error } = await supabase.from('landmark_submissions').insert([{
+      hunt_id:   activeLandmarkHunt.id,
+      lobby:     lobby.name,
+      username,
+      lat:       pos.coords.latitude,
+      lng:       pos.coords.longitude,
+      photo_url: photoUrl,
+      status:    'pending',
+    }]);
+
+    btn.disabled    = false;
+    btn.textContent = 'Submit 🚀';
+
+    if (error) {
+      document.getElementById('lsh-submit-status').textContent = 'Error: ' + error.message;
+      return;
+    }
+
+    closeFoundModal();
+    alert('✅ Submitted! Waiting for admin to review your find.');
+  }, err => {
+    btn.disabled    = false;
+    btn.textContent = 'Submit 🚀';
+    document.getElementById('lsh-submit-status').textContent = 'GPS error: ' + err.message;
+  });
 }
