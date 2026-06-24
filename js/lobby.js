@@ -1,27 +1,5 @@
 import { supabase } from './supabase.js';
 
-// ── NEU: LOBBIES LADEN BEIM START ────────────────────
-window.addEventListener('load', async () => {
-  const select = document.getElementById('lobby-select');
-  
-  const { data, error } = await supabase
-    .from('lobbies')
-    .select('name')
-    .order('name', { ascending: true });
- 
-  if (error || !data) {
-    select.innerHTML = '<option value="" disabled>Error loading lobbies</option>';
-    return;
-  }
-
-  select.innerHTML = '<option value="" disabled selected>Select a lobby…</option>';
-  data.forEach(lobby => {
-    const option = document.createElement('option');
-    option.value = lobby.name;
-    option.textContent = lobby.name;
-    select.appendChild(option);
-  });
-});
 
 // ── LOBBY STATE ──────────────────────────────────────
 // Exported so map.js and submission.js can read current lobby
@@ -57,15 +35,13 @@ document.getElementById('lobby-username').addEventListener('keydown', (e) => {
 });
 
 export async function joinLobby() {
-  const password      = document.getElementById('lobby-password').value.trim();
-  const username      = document.getElementById('lobby-username').value.trim();
-  const selectedLobby = document.getElementById('lobby-select').value;
+  const password = document.getElementById('lobby-password').value.trim();
+  const username = document.getElementById('lobby-username').value.trim();
 
   document.getElementById('lobby-error').style.display = 'none';
 
-  if (!selectedLobby) { showLobbyError('Please select a lobby.');  return; }
-  if (!password)      { showLobbyError('Please enter a password.'); return; }
-  if (!username)      { showLobbyError('Please enter a username.'); return; }
+  if (!password) { showLobbyError('Please enter a password.'); return; }
+  if (!username) { showLobbyError('Please enter a username.'); return; }
 
   const btn = document.getElementById('btn-lobby-join');
   btn.disabled = true;
@@ -74,7 +50,6 @@ export async function joinLobby() {
   const { data, error } = await supabase
     .from('lobbies')
     .select('id, name, password, home_lat, home_lng, admin_token')
-    .eq('name', selectedLobby)
     .eq('password', password)
     .maybeSingle();
 
