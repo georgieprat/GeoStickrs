@@ -1,0 +1,202 @@
+import { supabase } from './supabase.js';
+import { loadLeaderboard } from './submission.js';
+
+// ── STATE ────────────────────────────────────────────
+let map            = null;
+let activeManhunt  = null;
+let manhuntBoxLayer = null;
+let manhuntDraft   = null;
+
+const MANHUNT_RADIUS_METERS = { small: 200, medium: 500, large: 1000 };
+
+// ── INIT ─────────────────────────────────────────────
+export function initManhunt(mapInstance) {
+  map = mapInstance;
+  window._getActiveManhunt = () => activeManhunt;
+
+  document.getElementById('btn-manhunt-caught')
+    ?.addEventListener('click', checkManhuntCaught);
+}
+
+// ── BUTTON STATE ─────────────────────────────────────
+export function updateManhuntButtons(state) {
+  const create = document.getElementById('btn-manhunt-create');
+  const start  = document.getElementById('btn-manhunt-start');
+  const stop   = document.getElementById('btn-manhunt-stop');
+  if (!create || !start || !stop) return;
+  create.style.display = state === 'create' ? 'block' : 'none';
+  start.style.display  = state === 'start'  ? 'block' : 'none';
+  stop.style.display   = state === 'stop'   ? 'block' : 'none';
+}
+
+// ── CREATE DRAFT ─────────────────────────────────────
+export function createManhuntDraft() {
+  const radiusKey    = document.getElementById('manhunt-radius')?.value ?? 'medium';
+  const durationMin  = Number(document.getElementById('manhunt-duration')?.value ?? 30);
+
+  manhuntDraft = {
+    radiusMeters:    MANHUNT_RADIUS_METERS[radiusKey] ?? 500,
+    durationMinutes: durationMin,
+  };
+
+  updateManhuntButtons('start');
+  alert(
+    `✅ Manhunt configured!\nRadius: ${manhuntDraft.radiusMeters} m — ` +
+    `Duration: ${durationMin > 0 ? durationMin + ' min' : 'No limit'}\n\nPress Start when everyone is ready.`
+  );
+}
+
+// ── START ────────────────────────────────────────────
+export async function startManhunt() {
+  if (!navigator.geolocation) { alert('GPS not available.'); return; }
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+    const lat   = pos.coords.latitude;
+    const lng   = pos.coords.longitude;
+
+    const draft     = manhuntDraft ?? { radiusMeters: 500, durationMinutes: 30 };
+    const radiusDeg = draft.radiusMeters / 111000;
+
+    const box = {
+      south: lat - radiusDeg, north: lat + radiusDeg,
+      west:  lng - radiusDeg, east:  lng + radiusDeg,
+    };
+
+    const expiresAt = draft.durationMinutes > 0
+      ? new Date(Date.now() + draft.durationMinutes * 60 * 1000).toISOString()
+      : null;
+
+    const { error } = await supabase.from('manhunts').insert([{
+      lobby:      lobby.name,
+      active:     true,
+      hider_name: 'Hider',
+      hider_lat:  lat,
+      hider_lng:  lng,
+      box_geojson: box,
+      expires_at: expiresAt,
+    }]);
+
+    if (error) { console.error(error); alert('Failed to start manhunt.'); return; }
+
+    manhuntDraft = null;
+    updateManhuntButtons('stop');
+    await loadManhuntFromSupabase();
+    alert('🏃 Manhunt started.');
+
+  }, (err) => {
+    console.error('GPS ERROR:', err);
+    alert('GPS ERROR: ' + err.message);
+  });
+}
+
+// ── LOAD FROM SUPABASE ───────────────────────────────
+export async function loadManhuntFromSupabase() {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby || !map) return;
+
+  const { data, error } = await supabase
+    .from('manhunts')
+    .select('*')
+    .eq('lobby', lobby.name)
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) { console.error('Error loading Manhunt:', error); return; }
+  if (!data)  { console.log('No active Manhunt found.'); return; }
+
+  activeManhunt = data;
+  updateManhuntButtons('stop');
+  showManhuntOnMap(data);
+}
+
+// ── SHOW ON MAP ──────────────────────────────────────
+function showManhuntOnMap(manhunt) {
+  if (!map || !manhunt?.box_geojson) return;
+
+  const box = manhunt.box_geojson;
+
+  if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) {
+    map.removeLayer(manhuntBoxLayer);
+  }
+
+  const bounds = [[box.south, box.west], [box.north, box.east]];
+
+  manhuntBoxLayer = L.rectangle(bounds, {
+    color: '#ef4444', weight: 2,
+    fillColor: '#ef4444', fillOpacity: 0.12, dashArray: '8, 6',
+  }).addTo(map);
+
+  map.fitBounds(bounds);
+
+  document.getElementById('manhunt-panel').style.display = 'block';
+  document.getElementById('manhunt-status').textContent  = 'Active manhunt running';
+  document.getElementById('manhunt-hint').textContent    = 'Search inside the red area. Find the hider and press Caught!';
+}
+
+// ── CAUGHT CHECK ─────────────────────────────────────
+function checkManhuntCaught() {
+  if (!activeManhunt) { alert('No active manhunt loaded.'); return; }
+  if (!navigator.geolocation) { alert('GPS not available.'); return; }
+
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const hunterLat  = pos.coords.latitude;
+    const hunterLng  = pos.coords.longitude;
+    const lobby      = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+    const winnerName = lobby?.username || localStorage.getItem('geostickrs_username') || 'Hunter';
+
+    const distance = map.distance(
+      [hunterLat, hunterLng],
+      [activeManhunt.hider_lat, activeManhunt.hider_lng]
+    );
+
+    if (distance <= 50) {
+      alert(`🏆 Hider caught! +100 pts! Distance: ${Math.round(distance)} m`);
+      saveManhuntScore(hunterLat, hunterLng, winnerName);
+      endManhunt();
+    } else {
+      alert(`❌ Not close enough. Distance: ${Math.round(distance)} m`);
+    }
+  }, (err) => alert('GPS error: ' + err.message));
+}
+
+// ── SAVE SCORE ───────────────────────────────────────
+async function saveManhuntScore(lat, lng, username) {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby) return;
+
+  const { error } = await supabase.from('stickers').insert([{
+    username, lat, lng, photo_url: null, score: 100,
+    lobby: lobby.name, mode: 'manhunt',
+  }]);
+
+  if (error) { console.error('Error saving Manhunt score:', error); return; }
+  loadLeaderboard();
+}
+
+// ── END ──────────────────────────────────────────────
+export async function endManhunt() {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby) return;
+
+  const { error } = await supabase
+    .from('manhunts')
+    .update({ active: false })
+    .eq('lobby', lobby.name)
+    .eq('active', true);
+
+  if (error) { console.error(error); alert('Failed to end manhunt.'); return; }
+
+  if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) {
+    map.removeLayer(manhuntBoxLayer);
+  }
+
+  activeManhunt = null;
+  manhuntDraft  = null;
+
+  document.getElementById('manhunt-panel').style.display = 'none';
+  updateManhuntButtons('create');
+  alert('🛑 Manhunt ended.');
+}
