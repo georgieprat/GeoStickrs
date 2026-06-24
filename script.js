@@ -363,7 +363,12 @@ function handleTreasureHuntClick(lat, lng) {
 
   console.log('Treasure Hunt created:', treasureHuntDraft);
 
-  alert('🏴‍☠️ Treasure Hunt created and saved locally!');
+  alert('🏛️ Landmark Hunt created! You can now start it.');
+
+  const startButton = document.getElementById('btn-treasure-start');
+  if (startButton) {
+    startButton.style.display = 'block';
+  }
 
   treasureHuntDraft = null;
   treasureHuntStep = 0;
@@ -478,12 +483,20 @@ if (score) score.textContent = '';
 
 landmarkGuessMode = false;
 
+const startButton = document.getElementById('btn-treasure-start');
+  const stopButton = document.getElementById('btn-treasure-stop');
 
+  if (startButton) startButton.style.display = 'none';
+  if (stopButton) stopButton.style.display = 'none';
 
 
   
   endTreasureHuntInSupabase();
-  alert('Treasure Hunt ended.');
+
+
+  
+
+  alert('Landmark Hunt ended.');
 }
 
 
@@ -587,7 +600,12 @@ function startPreparedTreasureHunt() {
 
   showHuntBadge(hunt);
 
-  alert('🏴‍☠️ Treasure Hunt started!');
+  alert('🏛️ Landmark Hunt started!');
+
+  const stopButton = document.getElementById('btn-treasure-stop');
+  if (stopButton) {
+    stopButton.style.display = 'block';
+  }
 }
 
 
