@@ -39,27 +39,33 @@ if (savedLobby) {
 }
 
 // ── JOIN LOBBY ───────────────────────────────────────
+// Pre-fill username from last session
+const savedUsername = localStorage.getItem('geostickrs_username');
+if (savedUsername) {
+  window.addEventListener('load', () => {
+    const el = document.getElementById('lobby-username');
+    if (el) el.value = savedUsername;
+  });
+}
+
 document.getElementById('btn-lobby-join').addEventListener('click', joinLobby);
 document.getElementById('lobby-password').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') joinLobby();
 });
+document.getElementById('lobby-username').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') joinLobby();
+});
 
 export async function joinLobby() {
-  const input = document.getElementById('lobby-password').value.trim();
+  const password      = document.getElementById('lobby-password').value.trim();
+  const username      = document.getElementById('lobby-username').value.trim();
   const selectedLobby = document.getElementById('lobby-select').value;
-  const errorEl = document.getElementById('lobby-error');
 
-  errorEl.style.display = 'none';
+  document.getElementById('lobby-error').style.display = 'none';
 
-  if (!selectedLobby) {
-    showLobbyError('Please select a lobby.');
-    return;
-  }
-
-  if (!input) {
-    showLobbyError('Please enter a password.');
-    return;
-  }
+  if (!selectedLobby) { showLobbyError('Please select a lobby.');  return; }
+  if (!password)      { showLobbyError('Please enter a password.'); return; }
+  if (!username)      { showLobbyError('Please enter a username.'); return; }
 
   const btn = document.getElementById('btn-lobby-join');
   btn.disabled = true;
@@ -69,27 +75,26 @@ export async function joinLobby() {
     .from('lobbies')
     .select('id, name, password, home_lat, home_lng, admin_token')
     .eq('name', selectedLobby)
-    .eq('password', input)
+    .eq('password', password)
     .maybeSingle();
 
   btn.disabled = false;
   btn.textContent = 'Join lobby →';
 
-  if (error || !data) {
-    showLobbyError('Wrong password. Try again.');
-    return;
-  }
+  if (error || !data) { showLobbyError('Wrong password. Try again.'); return; }
 
   currentLobby = {
-    id: data.id,
-    name: data.name,
-    password: data.password,
-    home_lat: data.home_lat,
-    home_lng: data.home_lng,
+    id:          data.id,
+    name:        data.name,
+    password:    data.password,
+    home_lat:    data.home_lat,
+    home_lng:    data.home_lng,
     admin_token: data.admin_token,
+    username,
   };
 
   sessionStorage.setItem('geostickrs_lobby', JSON.stringify(currentLobby));
+  localStorage.setItem('geostickrs_username', username);
   window._enterApp?.();
 }
 

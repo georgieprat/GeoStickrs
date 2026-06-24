@@ -10,6 +10,14 @@ let previewMarker = null;
 export function init(mapInstance, lobbyRef) {
   map          = mapInstance;
   currentLobby = lobbyRef;
+
+  // Pre-fill username from lobby session
+  const lobbyData = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (lobbyData?.username) {
+    submission.username = lobbyData.username;
+    const input = document.getElementById('input-username');
+    if (input) input.value = lobbyData.username;
+  }
 }
 
 // ── SUBMISSION STATE ─────────────────────────────────

@@ -205,7 +205,7 @@ body {
 #lobby-badge {
   position: fixed;
   top: 16px;
-  right: 16px;
+  left: 16px;
   z-index: 20;
   background: rgba(255,255,255,0.92);
   backdrop-filter: blur(8px);
@@ -688,8 +688,8 @@ input[type="text"]:focus {
   }
 
   #lobby-badge {
-    top: 20px !important;
-    right: 10px !important;
+    top: 14px !important;
+    left: 10px !important;
   }
 }
 #intro-screen {
@@ -962,6 +962,91 @@ input[type="text"]:focus {
 }
 
 
+/* ── PIN MODALS ─────────────────────────────────────── */
+
+#pin-verify-modal,
+#pin-set-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 20000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-modal-card {
+  width: 340px;
+  max-width: 92vw;
+  background: white;
+  border-radius: 20px;
+  padding: 28px 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pin-modal-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.pin-modal-card p {
+  font-size: 14px;
+  color: #52525b;
+  line-height: 1.5;
+}
+
+.pin-hint {
+  font-size: 12px !important;
+  color: #a1a1aa !important;
+}
+
+.pin-modal-card input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #d4d4d8;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  text-align: center;
+  letter-spacing: 4px;
+  outline: none;
+  background: #fafafa;
+  transition: border-color 0.15s;
+}
+
+.pin-modal-card input:focus {
+  border-color: #18181b;
+  background: #fff;
+}
+
+.pin-modal-card button {
+  width: 100%;
+}
+
+/* ── LOBBY USERNAME INPUT ───────────────────────────── */
+#lobby-username {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #d4d4d8;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.15s;
+  background: #fafafa;
+}
+
+#lobby-username:focus {
+  border-color: #18181b;
+  background: #fff;
+}
+
 /* ── MANHUNT MODE CHOICE ───────────────────────────── */
 
 #manhunt-mode-choice {
@@ -1144,15 +1229,15 @@ input[type="text"]:focus {
 
   #leaderboard-list li { font-size: 11px !important; }
 
-  /* Lobby badge: smaller */
+  /* Lobby badge: tighter on mobile */
   #lobby-badge {
     top: 10px !important;
     left: 8px !important;
-    right: auto !important;
-    font-size: 12px !important;
-    padding: 5px 10px !important;
-    gap: 6px !important;
+    padding: 5px 6px 5px 10px !important;
+    gap: 5px !important;
   }
+
+  #lobby-badge-name { font-size: 12px !important; }
 
   #lobby-badge button {
     font-size: 11px !important;
@@ -1219,8 +1304,8 @@ input[type="text"]:focus {
   }
 
   #lobby-badge {
-    top: 16px !important;
-    right: 12px !important;
+    top: 14px !important;
+    left: 12px !important;
   }
 }
 

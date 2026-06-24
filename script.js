@@ -22,7 +22,8 @@ let homePickerActive = false;
 
 function initMap() {
   if (map) return;
-  map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
+  map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap © CARTO'
   }).addTo(map);
@@ -1033,8 +1034,8 @@ function checkManhuntCaught() {
   navigator.geolocation.getCurrentPosition((pos) => {
     const hunterLat = pos.coords.latitude;
     const hunterLng = pos.coords.longitude;
-    const winnerName =
-    localStorage.getItem('geostickrs_username') || 'Hunter';
+    const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+    const winnerName = lobby?.username || localStorage.getItem('geostickrs_username') || 'Hunter';
 
     const distance = map.distance(
       [hunterLat, hunterLng],
@@ -1068,7 +1069,7 @@ async function saveManhuntScore(lat, lng) {
 
   if (!lobby) return;
 
-  const username = 'Manhunt Winner';
+  const username = lobby.username || localStorage.getItem('geostickrs_username') || 'Hunter';
 
   const { error } = await supabase
     .from('stickers')
@@ -1286,6 +1287,9 @@ async function renameLobby() {
 
   if (!confirm(`Rename lobby to "${newName}"?`)) return;
 
+  const oldName = lobby.name;
+
+  // Update lobby name
   const { error } = await supabase
     .from('lobbies')
     .update({ name: newName })
@@ -1293,10 +1297,15 @@ async function renameLobby() {
 
   if (error) { alert('Error: ' + error.message); return; }
 
+  // Cascade rename to all related tables so data stays visible
+  await supabase.from('stickers')       .update({ lobby: newName }).eq('lobby', oldName);
+  await supabase.from('manhunts')       .update({ lobby: newName }).eq('lobby', oldName);
+  await supabase.from('treasure_hunts') .update({ lobby: newName }).eq('lobby', oldName);
+
   lobby.name = newName;
   sessionStorage.setItem('geostickrs_lobby', JSON.stringify(lobby));
   document.getElementById('lobby-badge-name').textContent = `🏠 ${newName}`;
-  alert(`✅ Lobby renamed to "${newName}".`);
+  alert(`✅ Lobby renamed to "${newName}". All other players need to rejoin with the new name.`);
 }
 
 async function changeLobbyPassword() {
