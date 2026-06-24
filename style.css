@@ -205,7 +205,7 @@ body {
 #lobby-badge {
   position: fixed;
   top: 16px;
-  left: 16px;
+  right: 16px;
   z-index: 20;
   background: rgba(255,255,255,0.92);
   backdrop-filter: blur(8px);
@@ -225,6 +225,7 @@ body {
   white-space: nowrap;
 }
 
+#btn-admin-panel,
 #btn-leave-lobby {
   font-size: 11px;
   padding: 4px 10px;
@@ -237,6 +238,7 @@ body {
   transition: background 0.15s;
 }
 
+#btn-admin-panel:hover,
 #btn-leave-lobby:hover {
   background: #e4e4e7;
   color: #18181b;
@@ -245,7 +247,7 @@ body {
 /* ── LEADERBOARD ─────────────────────────────────────── */
 #leaderboard {
   position: fixed;
-  top: 76px;
+  top: 70px;
   right: 16px;
   z-index: 20;
   background: rgba(255,255,255,0.92);
@@ -260,8 +262,7 @@ body {
 .leaderboard-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  gap: 4px;
   margin-bottom: 0;
 }
 
@@ -689,7 +690,7 @@ input[type="text"]:focus {
 
   #lobby-badge {
     top: 14px !important;
-    left: 10px !important;
+    right: 10px !important;
   }
 }
 #intro-screen {
@@ -1229,19 +1230,20 @@ input[type="text"]:focus {
 
   #leaderboard-list li { font-size: 11px !important; }
 
-  /* Lobby badge: tighter on mobile */
+  /* Lobby badge: compact on mobile, stays top-right */
   #lobby-badge {
     top: 10px !important;
-    left: 8px !important;
+    right: 8px !important;
     padding: 5px 6px 5px 10px !important;
     gap: 5px !important;
   }
 
-  #lobby-badge-name { font-size: 12px !important; }
+  #lobby-badge-name { font-size: 11px !important; }
 
-  #lobby-badge button {
-    font-size: 11px !important;
-    padding: 3px 8px !important;
+  #btn-admin-panel,
+  #btn-leave-lobby {
+    font-size: 10px !important;
+    padding: 3px 7px !important;
   }
 
   /* FAB: slightly smaller */
@@ -1252,22 +1254,43 @@ input[type="text"]:focus {
     padding: 11px 18px !important;
   }
 
-  /* Game panels: bottom sheet style */
+  /* Game panels: compact bottom strip on mobile */
   #manhunt-panel,
   #landmark-panel {
     position: fixed !important;
     top: auto !important;
-    bottom: 80px !important;
-    left: 10px !important;
-    right: 10px !important;
+    bottom: 72px !important;
+    left: 8px !important;
+    right: 8px !important;
     width: auto !important;
-    border-radius: 16px !important;
-    padding: 12px !important;
+    border-radius: 14px !important;
+    padding: 10px 12px !important;
   }
 
-  .game-panel-icon { font-size: 18px !important; }
-  .game-panel-header h3 { font-size: 13px !important; }
-  .game-panel-hint-box { font-size: 12px !important; padding: 8px 10px !important; }
+  .game-panel-header { margin-bottom: 6px !important; gap: 7px !important; }
+  .game-panel-icon { font-size: 16px !important; }
+  .game-panel-header h3 { font-size: 12px !important; }
+  .game-panel-subtitle { font-size: 10px !important; }
+
+  .game-panel-hint-box {
+    padding: 6px 9px !important;
+    font-size: 11px !important;
+    margin-bottom: 7px !important;
+    border-radius: 8px !important;
+  }
+
+  .game-panel-score { font-size: 11px !important; margin-bottom: 7px !important; }
+
+  .game-panel-btn {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* Leaderboard action buttons: slightly smaller */
+  .lb-action-btn {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+  }
 
   /* Hunt badge */
   #hunt-badge {
@@ -1305,7 +1328,7 @@ input[type="text"]:focus {
 
   #lobby-badge {
     top: 14px !important;
-    left: 12px !important;
+    right: 12px !important;
   }
 }
 
