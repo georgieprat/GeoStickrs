@@ -5,7 +5,7 @@ import './js/lobby.js';
 import './js/admin.js';
 import { init, loadAllStickers, loadLeaderboard, submission, placePreviewMarker } from './js/submission.js';
 import { initManhunt,      loadManhuntFromSupabase }       from './js/manhunt.js';
-import { initLandmark, loadActiveLandmarkHunt } from './js/landmark.js';
+import { initLandmark, loadActiveLandmarkHunt, subscribeToSubmissionUpdates } from './js/landmark.js';
 import {
   initLobbySettings, isHomePickerActive, saveNewHomeLocation,
 } from './js/lobby-settings.js';
@@ -55,6 +55,7 @@ function initMap() {
   loadLeaderboard();
   loadActiveLandmarkHunt();
   loadManhuntFromSupabase();
+  subscribeToSubmissionUpdates();
 }
 
 // ── ENTER APP ────────────────────────────────────────

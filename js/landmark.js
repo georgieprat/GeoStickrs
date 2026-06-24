@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { showToast, addMarkerToMap } from './submission.js';
 
 // ── STATE ─────────────────────────────────────────────
 let map                = null;
@@ -149,7 +150,7 @@ export async function approveLandmarkSubmission(id) {
 
   if (sub) {
     // score: 0 — scoring is handled by another team member
-    await supabase.from('stickers').insert([{
+    const { data: newSticker } = await supabase.from('stickers').insert([{
       username:  sub.username,
       lat:       sub.lat,
       lng:       sub.lng,
@@ -157,7 +158,9 @@ export async function approveLandmarkSubmission(id) {
       score:     0,
       lobby:     sub.lobby,
       mode:      'landmark',
-    }]);
+    }]).select().single();
+
+    if (newSticker) addMarkerToMap(newSticker);
   }
 
   alert('✅ Submission approved!');
@@ -170,6 +173,31 @@ export async function rejectLandmarkSubmission(id) {
   if (error) { alert('Error: ' + error.message); return; }
   alert('Submission rejected.');
   loadLandmarkSubmissions();
+}
+
+// ── PLAYER: Realtime submission status notifications ──
+export function subscribeToSubmissionUpdates() {
+  const lobby    = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  const username = lobby?.username;
+  if (!lobby || !username) return;
+
+  supabase
+    .channel('lsh-submission-status')
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'landmark_submissions',
+    }, payload => {
+      const row = payload.new;
+      if (row.username !== username || row.lobby !== lobby.name) return;
+
+      if (row.status === 'approved') {
+        showToast('✅ Dein Landmark-Fund wurde bestätigt! Sticker posted.');
+      } else if (row.status === 'rejected') {
+        showToast('❌ Dein Landmark-Fund wurde leider abgelehnt.');
+      }
+    })
+    .subscribe();
 }
 
 // ── PLAYER: Load Active Hunt on Startup ───────────────
@@ -192,6 +220,7 @@ export async function loadActiveLandmarkHunt() {
   activeLandmarkHunt = data;
   showPlayerPanel(data);
   showAdminActivePhase();
+  subscribeToSubmissionUpdates();
 }
 
 // ── UI HELPERS ────────────────────────────────────────
