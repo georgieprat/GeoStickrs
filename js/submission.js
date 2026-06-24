@@ -441,13 +441,19 @@ document.querySelectorAll('.lb-filter').forEach(btn => {
 });
 
 // Leaderboard collapse toggle
-document.getElementById('btn-leaderboard-toggle')?.addEventListener('click', () => {
+document.getElementById('leaderboard-header')?.addEventListener('click', () => {
   const body   = document.getElementById('leaderboard-body');
   const toggle = document.getElementById('btn-leaderboard-toggle');
   const collapsed = body.classList.toggle('collapsed');
   toggle.classList.toggle('collapsed', collapsed);
   toggle.textContent = collapsed ? '▶' : '▼';
 });
+
+//Prevents double-trigger
+document.getElementById('btn-leaderboard-toggle')
+  ?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
 
 // Auto-collapse on mobile on load
 if (window.innerWidth <= 600) {
