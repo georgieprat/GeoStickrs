@@ -11,12 +11,98 @@ import {
 
 const GLOBAL_ADMIN_PASSWORD = 'LBS_Admin';
 
+// ── HELPERS ───────────────────────────────────────────
+/**
+ * Toggle a sub-panel: show it if hidden, hide it if visible.
+ * Returns true if the panel is now visible.
+ */
+function togglePanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return false;
+  const isVisible = panel.style.display !== 'none' && panel.style.display !== '';
+  panel.style.display = isVisible ? 'none' : 'block';
+  return !isVisible;
+}
+
+// ── RULES OVERLAY ─────────────────────────────────────
+function initRulesOverlay() {
+  const rulesSection = document.getElementById('RulesAndLegal');
+  if (!rulesSection) return;
+
+  // Build overlay wrapper around the existing RulesAndLegal div
+  const overlay = document.createElement('div');
+  overlay.id = 'rules-overlay';
+  overlay.style.cssText = [
+    'display:none',
+    'position:fixed',
+    'inset:0',
+    'z-index:9999',
+    'background:rgba(0,0,0,0.6)',
+    'overflow-y:auto',
+    'padding:24px 16px',
+    'box-sizing:border-box',
+  ].join(';');
+
+  const modal = document.createElement('div');
+  modal.style.cssText = [
+    'position:relative',
+    'background:#fff',
+    'border-radius:12px',
+    'max-width:680px',
+    'margin:0 auto',
+    'padding:32px 28px 28px',
+    'font-size:14px',
+    'line-height:1.6',
+    'color:#18181b',
+  ].join(';');
+
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '&times;';
+  closeBtn.setAttribute('aria-label', 'Close rules');
+  closeBtn.style.cssText = [
+    'position:absolute',
+    'top:12px',
+    'right:14px',
+    'background:none',
+    'border:none',
+    'font-size:26px',
+    'line-height:1',
+    'cursor:pointer',
+    'color:#52525b',
+    'padding:0 4px',
+  ].join(';');
+
+  // Move the RulesAndLegal content into the modal
+  rulesSection.style.display = 'block'; // make it visible inside the modal
+  modal.appendChild(closeBtn);
+  modal.appendChild(rulesSection);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Close on X button
+  closeBtn.addEventListener('click', () => {
+    overlay.style.display = 'none';
+  });
+
+  // Close on backdrop click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.style.display = 'none';
+  });
+
+  // Expose open function
+  overlay.open = () => { overlay.style.display = 'block'; };
+
+  return overlay;
+}
+
 // ── ADMIN PANEL ──────────────────────────────────────
 function initAdminPanel() {
   const adminButton = document.getElementById('btn-admin-panel');
   const adminPanel  = document.getElementById('admin-panel');
   const closeButton = document.getElementById('btn-admin-close');
   if (!adminButton || !adminPanel || !closeButton) return;
+
+  const rulesOverlay = initRulesOverlay();
 
   adminButton.addEventListener('click', () => {
     const lobby      = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
@@ -37,7 +123,7 @@ function initAdminPanel() {
 
   // ── Landmark Sticker Hunt ─────────────────────────
   document.getElementById('btn-admin-treasure')?.addEventListener('click', () => {
-    document.getElementById('treasure-panel').style.display = 'block';
+    togglePanel('treasure-panel');
   });
   document.getElementById('btn-treasure-back')?.addEventListener('click', () => {
     document.getElementById('treasure-panel').style.display = 'none';
@@ -54,7 +140,7 @@ function initAdminPanel() {
 
   // ── Manhunt ──────────────────────────────────────
   document.getElementById('btn-admin-manhunt')?.addEventListener('click', () => {
-    document.getElementById('manhunt-admin-panel').style.display = 'block';
+    togglePanel('manhunt-admin-panel');
   });
   document.getElementById('btn-manhunt-create')?.addEventListener('click', createManhuntDraft);
   document.getElementById('btn-manhunt-start')?.addEventListener('click',  startManhunt);
@@ -65,8 +151,8 @@ function initAdminPanel() {
 
   // ── Moderation ───────────────────────────────────
   document.getElementById('btn-admin-review')?.addEventListener('click', () => {
-    document.getElementById('review-panel').style.display = 'block';
-    loadReviewPanel();
+    const nowVisible = togglePanel('review-panel');
+    if (nowVisible) loadReviewPanel();
   });
   document.getElementById('btn-review-close')?.addEventListener('click', () => {
     document.getElementById('review-panel').style.display = 'none';
@@ -76,6 +162,11 @@ function initAdminPanel() {
   document.getElementById('btn-admin-settings')?.addEventListener('click', () => {
     const panel = document.getElementById('lobby-settings-panel');
     if (!panel) return;
+    const isVisible = panel.style.display !== 'none' && panel.style.display !== '';
+    if (isVisible) {
+      panel.style.display = 'none';
+      return;
+    }
     const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
     document.getElementById('settings-lobby-name').value     = lobby?.name ?? '';
     document.getElementById('settings-lobby-password').value = '';
@@ -94,7 +185,7 @@ function initAdminPanel() {
     alert('Capture The Sticker coming soon.');
   });
   document.getElementById('btn-admin-rules')?.addEventListener('click', () => {
-    document.getElementById('RulesAndLegal').style.display = 'flex';
+    rulesOverlay?.open();
   });
 }
 
