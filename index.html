@@ -221,47 +221,47 @@
         🏛️ Landmark Hunt
       </button>
 
-    <div id="treasure-panel" style="display:none;">
-      <div class="admin-section">
-        <h3>🏛️ Landmark Sticker Hunt</h3>
+      <div id="treasure-panel" style="display:none;">
+        <div class="admin-section">
+          <h3>🏛️ Landmark Sticker Hunt</h3>
 
-        <!-- Create phase -->
-        <div id="lsh-create-form">
-          <label for="lsh-hint-1">Hint 1 *</label>
-          <input type="text" id="lsh-hint-1" class="admin-input" placeholder="z.B. Resselpark, near TU Hauptgebäude" autocomplete="off">
+          <!-- Create phase -->
+          <div id="lsh-create-form">
+            <label for="lsh-hint-1">Hint 1 *</label>
+            <input type="text" id="lsh-hint-1" class="admin-input" placeholder="z.B. Resselpark, near TU Hauptgebäude" autocomplete="off">
 
-          <label for="lsh-hint-2">Hint 2 (optional)</label>
-          <input type="text" id="lsh-hint-2" class="admin-input" placeholder="Additional hint…" autocomplete="off">
+            <label for="lsh-hint-2">Hint 2 (optional)</label>
+            <input type="text" id="lsh-hint-2" class="admin-input" placeholder="Additional hint…" autocomplete="off">
 
-          <label for="lsh-hint-3">Hint 3 (optional)</label>
-          <input type="text" id="lsh-hint-3" class="admin-input" placeholder="Additional hint…" autocomplete="off">
+            <label for="lsh-hint-3">Hint 3 (optional)</label>
+            <input type="text" id="lsh-hint-3" class="admin-input" placeholder="Additional hint…" autocomplete="off">
 
-          <button class="admin-action" id="btn-lsh-post">
-            📍 Post Hidden Sticker
-          </button>
+            <button class="admin-action" id="btn-lsh-post">
+              📍 Post Hidden Sticker
+            </button>
+          </div>
+
+          <!-- Active phase -->
+          <div id="lsh-active-form" style="display:none;">
+            <p style="color:#16a34a;font-weight:600;margin-bottom:8px;">✅ Hunt is active!</p>
+            <button class="admin-action" id="btn-lsh-review-submissions">
+              📋 Review Submissions
+            </button>
+            <button class="admin-action admin-action-danger" id="btn-lsh-stop">
+              🛑 End Hunt
+            </button>
+          </div>
+
+          <!-- Landmark submissions review -->
+          <div id="lsh-review-panel" style="display:none;">
+            <h3>🔍 Landmark Submissions</h3>
+            <div id="lsh-review-list"></div>
+            <button class="admin-action" id="btn-lsh-review-close">← Back</button>
+          </div>
+
+          <button class="admin-action" id="btn-treasure-back">← Back</button>
         </div>
-
-        <!-- Active phase -->
-        <div id="lsh-active-form" style="display:none;">
-          <p style="color:#16a34a;font-weight:600;margin-bottom:8px;">✅ Hunt is active!</p>
-          <button class="admin-action" id="btn-lsh-review-submissions">
-            📋 Review Submissions
-          </button>
-          <button class="admin-action admin-action-danger" id="btn-lsh-stop">
-            🛑 End Hunt
-          </button>
-        </div>
-
-        <!-- Landmark submissions review -->
-        <div id="lsh-review-panel" style="display:none;">
-          <h3>🔍 Landmark Submissions</h3>
-          <div id="lsh-review-list"></div>
-          <button class="admin-action" id="btn-lsh-review-close">← Back</button>
-        </div>
-
-        <button class="admin-action" id="btn-treasure-back">← Back</button>
       </div>
-    </div>
 
       <button class="admin-action" id="btn-admin-manhunt">
         🏃 Manhunt
@@ -329,7 +329,7 @@
 
       <button class="admin-action" id="btn-admin-rules">📋 Rules & Legal</button>
 
-      <div class="RulesAndLegal" id="RulesAndLegal">
+      <div class="RulesAndLegal" id="RulesAndLegal" style="display: none;">
         “Use this app responsibly. Do not capture or share illegal, harmful, or non-consensual content. Respect privacy, consent, and local laws. You are responsible for ensuring you have permission to photograph people and places.”<br>
         -Your GeoStickrs Team <br>
         <br>

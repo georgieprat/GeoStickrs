@@ -94,7 +94,7 @@ function initAdminPanel() {
     alert('Capture The Sticker coming soon.');
   });
   document.getElementById('btn-admin-rules')?.addEventListener('click', () => {
-    alert('Rules & Legal coming soon.');
+    document.getElementById('RulesAndLegal').style.display = 'flex';
   });
 }
 
