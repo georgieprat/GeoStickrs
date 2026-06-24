@@ -13,9 +13,11 @@ const GLOBAL_ADMIN_PASSWORD = 'LBS_Admin';
 let map = null;
 
 let activeManhunt = null;
+window._getActiveManhunt = () => activeManhunt;
 let manhuntBoxLayer = null;
 let manhuntHiderMarker = null;
 let landmarkGuessMode = false;
+let homePickerActive = false;
 
 
 function initMap() {
@@ -33,6 +35,11 @@ function initMap() {
 
   // Map click for location picking — dispatched to submission module
   map.on('click', (e) => {
+    if (homePickerActive) {
+      saveNewHomeLocation(e.latlng.lat, e.latlng.lng);
+      return;
+    }
+
     if (landmarkGuessMode) {
 
       handleLandmarkGuess(
@@ -216,22 +223,24 @@ function initAdminPanel() {
   });
 
   document.getElementById('btn-admin-manhunt')?.addEventListener('click', () => {
-  document.getElementById('manhunt-admin-panel').style.display = 'block';
-});
+    document.getElementById('manhunt-admin-panel').style.display = 'block';
+  });
 
-
+  document.getElementById('btn-manhunt-create')?.addEventListener('click', () => {
+    createManhuntDraft();
+  });
 
   document.getElementById('btn-manhunt-start')?.addEventListener('click', () => {
-  startManhunt();
+    startManhunt();
   });
 
   document.getElementById('btn-manhunt-stop')?.addEventListener('click', () => {
-  endManhunt();
+    endManhunt();
   });
 
   document.getElementById('btn-manhunt-back')?.addEventListener('click', () => {
-  document.getElementById('manhunt-admin-panel').style.display = 'none';
-});
+    document.getElementById('manhunt-admin-panel').style.display = 'none';
+  });
 
 
 
@@ -259,8 +268,22 @@ function initAdminPanel() {
   });
 
   document.getElementById('btn-admin-settings')?.addEventListener('click', () => {
-    alert('Lobby settings coming soon.');
+    const panel = document.getElementById('lobby-settings-panel');
+    if (!panel) return;
+    const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+    document.getElementById('settings-lobby-name').value     = lobby?.name     ?? '';
+    document.getElementById('settings-lobby-password').value = '';
+    panel.style.display = 'block';
   });
+
+  document.getElementById('btn-settings-back')?.addEventListener('click', () => {
+    document.getElementById('lobby-settings-panel').style.display = 'none';
+  });
+
+  document.getElementById('btn-settings-rename')?.addEventListener('click', renameLobby);
+  document.getElementById('btn-settings-password')?.addEventListener('click', changeLobbyPassword);
+  document.getElementById('btn-settings-home')?.addEventListener('click', startHomePicker);
+  document.getElementById('btn-settings-delete')?.addEventListener('click', deleteLobby);
 
   document.getElementById('btn-admin-endhunt')?.addEventListener('click', () => {
   endTreasureHunt();
@@ -287,6 +310,16 @@ function getTreasureHuntStorageKey() {
   return `geostickrs_treasure_hunt_${lobby?.name ?? 'default'}`;
 }
 
+function updateLandmarkHuntButtons(state) {
+  const create = document.getElementById('btn-treasure-create');
+  const start  = document.getElementById('btn-treasure-start');
+  const stop   = document.getElementById('btn-treasure-stop');
+  if (!create || !start || !stop) return;
+  create.style.display = state === 'create' ? 'block' : 'none';
+  start.style.display  = state === 'start'  ? 'block' : 'none';
+  stop.style.display   = state === 'stop'   ? 'block' : 'none';
+}
+
 function startTreasureHuntCreator() {
   console.log('Treasure Hunt Creator started');
   const adminPanel = document.getElementById('admin-panel');
@@ -301,11 +334,9 @@ function startTreasureHuntCreator() {
     : 3;
 
 
-  const durationMinutes = 60; // default: 1 hour
+  const durationMinutes = Number(document.getElementById('treasure-duration')?.value ?? 60);
 
-  //const durationMinutes = Number(duration);
-
-    const expiresAt = durationMinutes > 0
+  const expiresAt = durationMinutes > 0
   ? new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
   : null;
 
@@ -365,10 +396,7 @@ function handleTreasureHuntClick(lat, lng) {
 
   alert('🏛️ Landmark Hunt created! You can now start it.');
 
-  const startButton = document.getElementById('btn-treasure-start');
-  if (startButton) {
-    startButton.style.display = 'block';
-  }
+  updateLandmarkHuntButtons('start');
 
   treasureHuntDraft = null;
   treasureHuntStep = 0;
@@ -483,14 +511,8 @@ if (score) score.textContent = '';
 
 landmarkGuessMode = false;
 
-const startButton = document.getElementById('btn-treasure-start');
-  const stopButton = document.getElementById('btn-treasure-stop');
+updateLandmarkHuntButtons('create');
 
-  if (startButton) startButton.style.display = 'none';
-  if (stopButton) stopButton.style.display = 'none';
-
-
-  
   endTreasureHuntInSupabase();
 
 
@@ -588,7 +610,7 @@ function startPreparedTreasureHunt() {
     return;
   }
 
-  const durationMinutes = 60;
+  const durationMinutes = Number(document.getElementById('treasure-duration')?.value ?? 60);
 
   hunt.active = true;
   hunt.startedAt = new Date().toISOString();
@@ -602,10 +624,7 @@ function startPreparedTreasureHunt() {
 
   alert('🏛️ Landmark Hunt started!');
 
-  const stopButton = document.getElementById('btn-treasure-stop');
-  if (stopButton) {
-    stopButton.style.display = 'block';
-  }
+  updateLandmarkHuntButtons('stop');
 }
 
 
@@ -820,6 +839,7 @@ async function loadTreasureHuntFromSupabase() {
     JSON.stringify(data.hunt_data)
   );
 
+  updateLandmarkHuntButtons('stop');
   loadSavedTreasureHunt();
 }
 
@@ -827,6 +847,33 @@ async function loadTreasureHuntFromSupabase() {
 
 
 // ── MANHUNT ─────────────────────────────────────────
+
+let manhuntDraft = null;
+
+const MANHUNT_RADIUS_METERS = { small: 200, medium: 500, large: 1000 };
+
+function updateManhuntButtons(state) {
+  const create = document.getElementById('btn-manhunt-create');
+  const start  = document.getElementById('btn-manhunt-start');
+  const stop   = document.getElementById('btn-manhunt-stop');
+  if (!create || !start || !stop) return;
+  create.style.display = state === 'create' ? 'block' : 'none';
+  start.style.display  = state === 'start'  ? 'block' : 'none';
+  stop.style.display   = state === 'stop'   ? 'block' : 'none';
+}
+
+function createManhuntDraft() {
+  const radiusKey  = document.getElementById('manhunt-radius')?.value  ?? 'medium';
+  const durationMin = Number(document.getElementById('manhunt-duration')?.value ?? 30);
+
+  manhuntDraft = {
+    radiusMeters: MANHUNT_RADIUS_METERS[radiusKey] ?? 500,
+    durationMinutes: durationMin
+  };
+
+  updateManhuntButtons('start');
+  alert(`✅ Manhunt configured!\nRadius: ${manhuntDraft.radiusMeters} m — Duration: ${durationMin > 0 ? durationMin + ' min' : 'No limit'}\n\nPress Start when everyone is ready.`);
+}
 
 async function startManhunt() {
 
@@ -845,15 +892,19 @@ async function startManhunt() {
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
 
-    const offsetLat = (Math.random() * 0.4) - 0.2;
-    const offsetLng = (Math.random() * 0.4) - 0.2;
+    const draft = manhuntDraft ?? { radiusMeters: 500, durationMinutes: 30 };
+    const radiusDeg = draft.radiusMeters / 111000;
 
     const box = {
-      south: lat - 0.1 + offsetLat,
-      north: lat + 0.1 + offsetLat,
-      west: lng - 0.1 + offsetLng,
-      east: lng + 0.1 + offsetLng
+      south: lat - radiusDeg,
+      north: lat + radiusDeg,
+      west:  lng - radiusDeg,
+      east:  lng + radiusDeg
     };
+
+    const expiresAt = draft.durationMinutes > 0
+      ? new Date(Date.now() + draft.durationMinutes * 60 * 1000).toISOString()
+      : null;
 
     const { error } = await supabase
       .from('manhunts')
@@ -863,7 +914,8 @@ async function startManhunt() {
         hider_name: 'Hider',
         hider_lat: lat,
         hider_lng: lng,
-        box_geojson: box
+        box_geojson: box,
+        expires_at: expiresAt
       }]);
 
     if (error) {
@@ -871,7 +923,9 @@ async function startManhunt() {
       alert('Failed to start manhunt.');
       return;
     }
-    console.log('Manhunt saved to Supabase');
+
+    manhuntDraft = null;
+    updateManhuntButtons('stop');
 
     await loadManhuntFromSupabase();
 
@@ -914,6 +968,7 @@ async function startManhunt() {
   console.log('Active Manhunt loaded:', data);
 
   activeManhunt = data;
+  updateManhuntButtons('stop');
   showManhuntOnMap(data);
 }
 
@@ -1151,8 +1206,10 @@ async function endManhunt() {
   }
 
   activeManhunt = null;
+  manhuntDraft  = null;
 
   document.getElementById('manhunt-panel').style.display = 'none';
+  updateManhuntButtons('create');
 
   alert('🛑 Manhunt ended.');
 }
@@ -1215,4 +1272,118 @@ async function handleLandmarkGuess(lat, lng) {
     `🎯 Guess submitted!\n\nDistance: ${Math.round(distance / 1000)} km\nScore: ${score} pts`
   );
 
+}
+
+
+// ── LOBBY SETTINGS ───────────────────────────────────
+
+async function renameLobby() {
+  const newName = document.getElementById('settings-lobby-name').value.trim();
+  if (!newName) { alert('Please enter a new name.'); return; }
+
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby) return;
+
+  if (!confirm(`Rename lobby to "${newName}"?`)) return;
+
+  const { error } = await supabase
+    .from('lobbies')
+    .update({ name: newName })
+    .eq('id', lobby.id);
+
+  if (error) { alert('Error: ' + error.message); return; }
+
+  lobby.name = newName;
+  sessionStorage.setItem('geostickrs_lobby', JSON.stringify(lobby));
+  document.getElementById('lobby-badge-name').textContent = `🏠 ${newName}`;
+  alert(`✅ Lobby renamed to "${newName}".`);
+}
+
+async function changeLobbyPassword() {
+  const newPassword = document.getElementById('settings-lobby-password').value.trim();
+  if (!newPassword) { alert('Please enter a new password.'); return; }
+
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby) return;
+
+  if (!confirm('Change lobby password?')) return;
+
+  const { error } = await supabase
+    .from('lobbies')
+    .update({ password: newPassword })
+    .eq('id', lobby.id);
+
+  if (error) { alert('Error: ' + error.message); return; }
+
+  lobby.password = newPassword;
+  sessionStorage.setItem('geostickrs_lobby', JSON.stringify(lobby));
+  document.getElementById('settings-lobby-password').value = '';
+  alert('✅ Password changed.');
+}
+
+function startHomePicker() {
+  if (!map) return;
+  homePickerActive = true;
+
+  document.getElementById('admin-panel').style.display = 'none';
+
+  const hint = document.getElementById('location-hint');
+  const instruction = document.getElementById('location-instruction');
+  if (hint) hint.style.display = 'flex';
+  if (instruction) instruction.textContent = '🏠 Click on the map to set the new home location.';
+
+  document.getElementById('btn-location-next').style.display = 'none';
+  document.getElementById('btn-location-back').textContent = '✕ Cancel';
+
+  const cancelHandler = () => {
+    homePickerActive = false;
+    hint.style.display = 'none';
+    document.getElementById('btn-location-next').style.display = '';
+    document.getElementById('btn-location-back').textContent = '← Back';
+    document.getElementById('btn-location-back').removeEventListener('click', cancelHandler);
+  };
+  document.getElementById('btn-location-back').addEventListener('click', cancelHandler);
+}
+
+async function saveNewHomeLocation(lat, lng) {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby) return;
+
+  const { error } = await supabase
+    .from('lobbies')
+    .update({ home_lat: lat, home_lng: lng })
+    .eq('id', lobby.id);
+
+  if (error) { alert('Error: ' + error.message); return; }
+
+  lobby.home_lat = lat;
+  lobby.home_lng = lng;
+  sessionStorage.setItem('geostickrs_lobby', JSON.stringify(lobby));
+
+  const hint = document.getElementById('location-hint');
+  if (hint) hint.style.display = 'none';
+  document.getElementById('btn-location-next').style.display = '';
+  document.getElementById('btn-location-back').textContent = '← Back';
+  homePickerActive = false;
+
+  alert(`✅ Home location updated to ${lat.toFixed(4)}, ${lng.toFixed(4)}.`);
+}
+
+async function deleteLobby() {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby) return;
+
+  if (!confirm(`Delete lobby "${lobby.name}"? This cannot be undone.`)) return;
+  if (!confirm('Are you sure? All stickers and game data will be lost.')) return;
+
+  const { error } = await supabase
+    .from('lobbies')
+    .delete()
+    .eq('id', lobby.id);
+
+  if (error) { alert('Error: ' + error.message); return; }
+
+  sessionStorage.removeItem('geostickrs_lobby');
+  alert('Lobby deleted.');
+  window.location.reload();
 }

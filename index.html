@@ -107,17 +107,20 @@
     <div id="leaderboard">
       <div class="leaderboard-header">
         <h2>🏆 Leaderboard</h2>
-        <select id="leaderboard-mode">
-        <option value="total">🏆 Total Score</option>
-        <option value="classic">📍 Classic Stickers</option>
-        <option value="manhunt">🏃 Manhunt</option>
-        <option value="treasure">🏴‍☠️ Treasure Hunt</option>
-      </select>
+        <button id="btn-leaderboard-toggle" class="lb-toggle" aria-label="Toggle leaderboard">▼</button>
       </div>
-      <ul id="leaderboard-list">
-        <li class="loading">Loading…</li>
-      </ul>
-    </div>                    
+      <div id="leaderboard-body">
+        <div class="lb-filters">
+          <button class="lb-filter active" data-mode="total">Total</button>
+          <button class="lb-filter" data-mode="classic">📍</button>
+          <button class="lb-filter" data-mode="manhunt">🏃</button>
+          <button class="lb-filter" data-mode="treasure">🏛️</button>
+        </div>
+        <ul id="leaderboard-list">
+          <li class="loading">Loading…</li>
+        </ul>
+      </div>
+    </div>
 
     <!-- FAB -->
     <button id="fab-submit">＋ Post a sticker</button>
@@ -208,21 +211,34 @@
         <h3>🏛️ Landmark Hunt Manager</h3>
 
 
-        <label for="treasure-checkpoint-count">
-        Number of checkpoints
-      </label>
+        <label for="treasure-checkpoint-count">Number of checkpoints</label>
+        <input
+          id="treasure-checkpoint-count"
+          type="number"
+          min="1"
+          max="20"
+          value="3"
+          class="admin-select"
+        >
 
-      <input
-        id="treasure-checkpoint-count"
-        type="number"
-        min="1"
-        max="20"
-        value="3"
-      >
+        <label for="treasure-duration">Duration</label>
+        <select id="treasure-duration" class="admin-select">
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60" selected>1 hour</option>
+          <option value="120">2 hours</option>
+          <option value="0">No time limit</option>
+        </select>
 
 
         <button class="admin-action" id="btn-treasure-create">
-          Create / Edit Landmark Hunt
+          ➕ Create Landmark Hunt
+        </button>
+
+        <button class="admin-action"
+                id="btn-treasure-edit"
+                style="display:none;">
+          ✏️ Edit Landmark Hunt
         </button>
 
         <button class="admin-action" id="btn-treasure-start" style="display:none;">
@@ -260,17 +276,42 @@
       </button>
 
       <div id="manhunt-admin-panel" style="display:none;">
-        <button class="admin-action" id="btn-manhunt-start">
-          ▶ Start Manhunt
-        </button>
 
-        <button class="admin-action" id="btn-manhunt-stop">
-          🛑 End Manhunt
-        </button>
+        <div class="admin-section">
+          <h3>🏃 Manhunt Manager</h3>
 
-        <button class="admin-action" id="btn-manhunt-back">
-          ← Back
-        </button>
+          <label for="manhunt-radius">Search area radius</label>
+          <select id="manhunt-radius" class="admin-select">
+            <option value="small">Small (~200 m)</option>
+            <option value="medium" selected>Medium (~500 m)</option>
+            <option value="large">Large (~1 km)</option>
+          </select>
+
+          <label for="manhunt-duration">Duration</label>
+          <select id="manhunt-duration" class="admin-select">
+            <option value="15">15 minutes</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="0">No time limit</option>
+          </select>
+
+          <button class="admin-action" id="btn-manhunt-create">
+            ➕ Create Manhunt
+          </button>
+
+          <button class="admin-action" id="btn-manhunt-start" style="display:none;">
+            ▶ Start Manhunt
+          </button>
+
+          <button class="admin-action" id="btn-manhunt-stop" style="display:none;">
+            🛑 End Manhunt
+          </button>
+
+          <button class="admin-action" id="btn-manhunt-back">
+            ← Back
+          </button>
+        </div>
+
       </div>
 
       <button class="admin-action" id="btn-admin-capture">
@@ -300,6 +341,24 @@
     <div class="admin-section">
       <h3>Lobby</h3>
       <button class="admin-action" id="btn-admin-settings">⚙️ Lobby Settings</button>
+
+      <div id="lobby-settings-panel" style="display:none;">
+        <h3>⚙️ Lobby Settings</h3>
+
+        <label for="settings-lobby-name">Rename Lobby</label>
+        <input type="text" id="settings-lobby-name" class="admin-input" placeholder="New lobby name" autocomplete="off">
+        <button class="admin-action" id="btn-settings-rename">✏️ Save Name</button>
+
+        <label for="settings-lobby-password">Change Password</label>
+        <input type="password" id="settings-lobby-password" class="admin-input" placeholder="New password" autocomplete="off">
+        <button class="admin-action" id="btn-settings-password">🔑 Save Password</button>
+
+        <button class="admin-action" id="btn-settings-home">🏠 Change Home Location</button>
+
+        <button class="admin-action admin-action-danger" id="btn-settings-delete">🗑 Delete Lobby</button>
+
+        <button class="admin-action" id="btn-settings-back">← Back</button>
+      </div>
     </div>
   </div>
 </div>
@@ -307,10 +366,17 @@
 
 <!-- MANHUNT PLAYER PANEL -->
 <div id="manhunt-panel" style="display:none;">
-  <h3>🏃 Manhunt</h3>
-  <p id="manhunt-status">No active manhunt.</p>
-  <p id="manhunt-hint">Find the hider inside the search area.</p>
-  <button id="btn-manhunt-caught" class="btn-primary">
+  <div class="game-panel-header">
+    <span class="game-panel-icon">🏃</span>
+    <div>
+      <h3>Manhunt</h3>
+      <span id="manhunt-status" class="game-panel-subtitle">Active manhunt running</span>
+    </div>
+  </div>
+  <div class="game-panel-hint-box">
+    <p id="manhunt-hint">Find the hider inside the red search area.</p>
+  </div>
+  <button id="btn-manhunt-caught" class="btn-primary game-panel-btn">
     📸 Caught!
   </button>
 </div>
@@ -323,21 +389,18 @@
 </div>
 
 <div id="landmark-panel" style="display:none;">
-  <h3>🏛️ Landmark Hunt</h3>
-
-  <p id="landmark-progress">
-    Hint 1
-  </p>
-
-  <p id="landmark-current-hint">
-    Waiting for hint...
-  </p>
-
-  <p id="landmark-max-score">
-    Max Score: 500 pts
-  </p>
-
-  <button id="btn-landmark-guess" class="btn-primary">
+  <div class="game-panel-header">
+    <span class="game-panel-icon">🏛️</span>
+    <div>
+      <h3>Landmark Hunt</h3>
+      <span id="landmark-progress" class="game-panel-subtitle">Hint 1</span>
+    </div>
+  </div>
+  <div class="game-panel-hint-box">
+    <p id="landmark-current-hint">Waiting for hint...</p>
+  </div>
+  <p id="landmark-max-score" class="game-panel-score">Max Score: 500 pts</p>
+  <button id="btn-landmark-guess" class="btn-primary game-panel-btn">
     🎯 Guess Location
   </button>
 </div>
@@ -382,6 +445,17 @@
       Cancel
     </button>
 
+  </div>
+</div>
+
+<!-- MANHUNT MODE CHOICE -->
+<div id="manhunt-mode-choice" style="display:none;">
+  <div class="manhunt-choice-card">
+    <h3>🏃 Manhunt is active</h3>
+    <p>What do you want to do?</p>
+    <button id="btn-choice-classic" class="btn-primary">📍 Classic Sticker</button>
+    <button id="btn-choice-manhunt" class="btn-secondary">🏃 Go to Manhunt</button>
+    <button id="btn-choice-cancel" class="btn-ghost">Cancel</button>
   </div>
 </div>
 

@@ -79,7 +79,7 @@ function hideAllSteps() {
 }
 
 // ── FAB ──────────────────────────────────────────────
-document.getElementById('fab-submit').addEventListener('click', () => {
+function startSubmissionFlow() {
   submission.lat          = null;
   submission.lng          = null;
   submission.photoFile    = null;
@@ -90,6 +90,28 @@ document.getElementById('fab-submit').addEventListener('click', () => {
   } else {
     openStep('username');
   }
+}
+
+document.getElementById('fab-submit').addEventListener('click', () => {
+  if (window._getActiveManhunt && window._getActiveManhunt()) {
+    document.getElementById('manhunt-mode-choice').style.display = 'flex';
+    return;
+  }
+  startSubmissionFlow();
+});
+
+document.getElementById('btn-choice-classic')?.addEventListener('click', () => {
+  document.getElementById('manhunt-mode-choice').style.display = 'none';
+  startSubmissionFlow();
+});
+
+document.getElementById('btn-choice-manhunt')?.addEventListener('click', () => {
+  document.getElementById('manhunt-mode-choice').style.display = 'none';
+  document.getElementById('manhunt-panel').style.display = 'block';
+});
+
+document.getElementById('btn-choice-cancel')?.addEventListener('click', () => {
+  document.getElementById('manhunt-mode-choice').style.display = 'none';
 });
 
 // ── STEP: USERNAME ───────────────────────────────────
@@ -322,7 +344,8 @@ export async function loadAllStickers() {
 
 // ── LEADERBOARD ──────────────────────────────────────
 export async function loadLeaderboard() {
-  const mode = document.getElementById('leaderboard-mode')?.value || 'top';
+  const activeFilter = document.querySelector('.lb-filter.active');
+  const mode = activeFilter?.dataset.mode || 'total';
   const list = document.getElementById('leaderboard-list');
   if (!list) return;
   list.innerHTML = '<li class="loading">Loading…</li>';
@@ -400,7 +423,34 @@ const { data, error } = await query.order('score', { ascending: false });
       }).join('');
 }
 
-document.getElementById('leaderboard-mode')?.addEventListener('change', loadLeaderboard);
+// Leaderboard pill filters
+document.querySelectorAll('.lb-filter').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.lb-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadLeaderboard();
+  });
+});
+
+// Leaderboard collapse toggle
+document.getElementById('btn-leaderboard-toggle')?.addEventListener('click', () => {
+  const body   = document.getElementById('leaderboard-body');
+  const toggle = document.getElementById('btn-leaderboard-toggle');
+  const collapsed = body.classList.toggle('collapsed');
+  toggle.classList.toggle('collapsed', collapsed);
+  toggle.textContent = collapsed ? '▶' : '▼';
+});
+
+// Auto-collapse on mobile on load
+if (window.innerWidth <= 600) {
+  const body   = document.getElementById('leaderboard-body');
+  const toggle = document.getElementById('btn-leaderboard-toggle');
+  if (body && toggle) {
+    body.classList.add('collapsed');
+    toggle.classList.add('collapsed');
+    toggle.textContent = '▶';
+  }
+}
 
 // ── TOAST & ERRORS ────────────────────────────────────
 export function showToast(msg) {
