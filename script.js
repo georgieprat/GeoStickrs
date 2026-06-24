@@ -15,6 +15,7 @@ let map = null;
 let activeManhunt = null;
 let manhuntBoxLayer = null;
 let manhuntHiderMarker = null;
+let landmarkGuessMode = false;
 
 
 function initMap() {
@@ -32,6 +33,15 @@ function initMap() {
 
   // Map click for location picking — dispatched to submission module
   map.on('click', (e) => {
+    if (landmarkGuessMode) {
+
+      handleLandmarkGuess(
+        e.latlng.lat,
+        e.latlng.lng
+      );
+
+      return;
+    }
 
     // Treasure Hunt Creator active?
     if (treasureHuntDraft) {
@@ -375,17 +385,17 @@ function loadSavedTreasureHunt() {
     return;
   }
 
-  hunt.checkpoints.forEach((checkpoint, index) => {
-    L.marker([checkpoint.lat, checkpoint.lng])
-      .addTo(map)
-      .bindPopup(`Checkpoint ${index + 1}`);
-  });
+  //hunt.checkpoints.forEach((checkpoint, index) => {
+   // L.marker([checkpoint.lat, checkpoint.lng])
+    //  .addTo(map)
+     // .bindPopup(`Checkpoint ${index + 1}`);
+  //});
 
-  if (hunt.treasure) {
-  L.marker([hunt.treasure.lat, hunt.treasure.lng])
-    .addTo(map)
-    .bindPopup('🏆 Treasure');
-}
+ // if (hunt.treasure) {
+  //L.marker([hunt.treasure.lat, hunt.treasure.lng])
+   // .addTo(map)
+    //.bindPopup('🏆 Treasure');
+//}
 
 showHuntBadge(hunt);
 }
@@ -398,7 +408,8 @@ function showHuntBadge(hunt) {
 
   if (!badge || !timer || !hunt) return;
 
-  badge.style.display = 'block';
+  badge.style.display = 'none';
+  showLandmarkPanel(hunt);
 
   function updateTimer() {
     if (!hunt.expiresAt) {
@@ -447,10 +458,30 @@ function endTreasureHunt() {
   activePlayerHunt = null;
   
 
-  const badge = document.getElementById('hunt-badge');
-  if (badge) {
-    badge.style.display = 'none';
-  }
+const badge = document.getElementById('hunt-badge');
+if (badge) {
+  badge.style.display = 'none';
+}
+
+const landmarkPanel = document.getElementById('landmark-panel');
+if (landmarkPanel) {
+  landmarkPanel.style.display = 'none';
+}
+
+const progress = document.getElementById('landmark-progress');
+const hint = document.getElementById('landmark-current-hint');
+const score = document.getElementById('landmark-max-score');
+
+if (progress) progress.textContent = '';
+if (hint) hint.textContent = '';
+if (score) score.textContent = '';
+
+landmarkGuessMode = false;
+
+
+
+
+  
   endTreasureHuntInSupabase();
   alert('Treasure Hunt ended.');
 }
@@ -466,7 +497,7 @@ function initHintModal() {
   saveButton.addEventListener('click', () => {
     if (!pendingCheckpoint || !treasureHuntDraft) return;
 
-    const hint = hintInput.value.trim() || `Hint for Checkpoint ${treasureHuntStep + 1}`;
+    const hint = hintInput.value.trim() ||`Hint Level ${treasureHuntStep + 1}`;
 
     treasureHuntDraft.checkpoints.push({
       lat: pendingCheckpoint.lat,
@@ -477,7 +508,7 @@ function initHintModal() {
     const marker = L.marker([pendingCheckpoint.lat, pendingCheckpoint.lng])
       .addTo(map)
       .bindPopup(`
-        <strong>Checkpoint ${treasureHuntStep + 1}</strong><br>
+        <strong>Hint ${treasureHuntStep + 1}</strong><br>
         ${hint}
       `)
       .openPopup();  
@@ -490,7 +521,7 @@ function initHintModal() {
     treasureHuntStep++;
 
     if (treasureHuntStep < treasureHuntCheckpointCount) {
-      alert(`Checkpoint ${treasureHuntStep} saved. Set Checkpoint ${treasureHuntStep + 1}.`);
+      alert(`Hint ${treasureHuntStep} saved. Set Hint ${treasureHuntStep + 1}.`);
     } else {
       alert(
   `Checkpoint ${treasureHuntCheckpointCount} saved. Now place the Treasure.`);
@@ -499,6 +530,30 @@ function initHintModal() {
 }
 
 window.addEventListener('load', initHintModal);
+
+
+
+
+
+function initLandmarkGuessButton() {
+
+  const btn = document.getElementById('btn-landmark-guess');
+
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+
+    landmarkGuessMode = true;
+
+    alert(
+      '🎯 Guess Mode enabled.\n\nClick on the map to place your guess.'
+    );
+
+  });
+}
+
+window.addEventListener('load', initLandmarkGuessButton);
+
 
 
 function startPreparedTreasureHunt() {
@@ -1082,4 +1137,64 @@ async function endManhunt() {
   document.getElementById('manhunt-panel').style.display = 'none';
 
   alert('🛑 Manhunt ended.');
+}
+
+
+function showLandmarkPanel(hunt) {
+  const panel = document.getElementById('landmark-panel');
+  const progress = document.getElementById('landmark-progress');
+  const hint = document.getElementById('landmark-current-hint');
+  const score = document.getElementById('landmark-max-score');
+
+  if (!panel || !hunt?.checkpoints?.length) return;
+
+  panel.style.display = 'block';
+
+  progress.textContent = 'Hint 1 / ' + hunt.checkpoints.length;
+  hint.textContent = hunt.checkpoints[0].hint;
+  score.textContent = 'Max Score: 500 pts';
+}
+
+
+async function handleLandmarkGuess(lat, lng) {
+
+  landmarkGuessMode = false;
+
+  const saved = localStorage.getItem(
+    getTreasureHuntStorageKey()
+  );
+
+  if (!saved) {
+    alert('No active Landmark Hunt.');
+    return;
+  }
+
+  const hunt = JSON.parse(saved);
+
+  if (!hunt.treasure) {
+    alert('No landmark configured.');
+    return;
+  }
+
+  const distance = map.distance(
+    [lat, lng],
+    [hunt.treasure.lat, hunt.treasure.lng]
+  );
+
+  let score = 0;
+
+  if (distance <= 1000) {
+    score = 500;
+  } else if (distance <= 10000) {
+    score = 300;
+  } else if (distance <= 50000) {
+    score = 200;
+  } else if (distance <= 200000) {
+    score = 100;
+  }
+
+  alert(
+    `🎯 Guess submitted!\n\nDistance: ${Math.round(distance / 1000)} km\nScore: ${score} pts`
+  );
+
 }

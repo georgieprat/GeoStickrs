@@ -972,3 +972,48 @@ input[type="text"]:focus {
     width: auto !important;
   }
 }
+
+
+/* ── LANDMARK HUNT PANEL ───────────────────────────── */
+
+#landmark-panel {
+  position: fixed;
+  top: 300px;
+  right: 16px;
+  z-index: 30;
+
+  width: 220px;
+
+  background: rgba(255,255,255,0.96);
+  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  padding: 14px;
+
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+#landmark-panel h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+#landmark-progress {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+#landmark-current-hint {
+  color: #52525b;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+#landmark-max-score {
+  color: #16a34a;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+#btn-landmark-guess {
+  width: 100%;
+}

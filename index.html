@@ -205,7 +205,7 @@
     <div id="treasure-panel" style="display:none;">
 
       <div class="admin-section">
-        <h3>🏴‍☠️ Treasure Hunt Manager</h3>
+        <h3>🏛️ Landmark Hunt Manager</h3>
 
 
         <label for="treasure-checkpoint-count">
@@ -222,7 +222,7 @@
 
 
         <button class="admin-action" id="btn-treasure-create">
-          Create / Edit Hunt
+          Create / Edit Landmark Hunt
         </button>
 
         <button class="admin-action" id="btn-treasure-start">
@@ -252,7 +252,7 @@
       <h3>Gamemodes</h3>
 
       <button class="admin-action" id="btn-admin-treasure">
-        🏴‍☠️ Treasure Hunt
+        🏛️ Landmark Hunt
       </button>
 
       <button class="admin-action" id="btn-admin-manhunt">
@@ -318,11 +318,29 @@
 
 <!-- ACTIVE HUNT BADGE -->
 <div id="hunt-badge" style="display:none;">
-  <strong>🏴‍☠️ Treasure Hunt</strong>
+  <strong>🏛️ Landmark Hunt</strong>
   <span id="hunt-timer">Loading…</span>
 </div>
 
+<div id="landmark-panel" style="display:none;">
+  <h3>🏛️ Landmark Hunt</h3>
 
+  <p id="landmark-progress">
+    Hint 1
+  </p>
+
+  <p id="landmark-current-hint">
+    Waiting for hint...
+  </p>
+
+  <p id="landmark-max-score">
+    Max Score: 500 pts
+  </p>
+
+  <button id="btn-landmark-guess" class="btn-primary">
+    🎯 Guess Location
+  </button>
+</div>
 
 
 <!-- CHECKPOINT HINT MODAL -->
