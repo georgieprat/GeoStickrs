@@ -226,7 +226,8 @@ body {
 }
 
 #btn-admin-panel,
-#btn-leave-lobby {
+#btn-leave-lobby,
+.delete-sticker-btn {
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 100px;

@@ -244,8 +244,9 @@ async function loadReviewPanel() {
       ${s.photo_url
         ? `<img src="${s.photo_url}" style="width:100%;max-width:200px;border-radius:8px;margin-top:8px;">`
         : '<em>No photo</em>'}
-      <br><br>
+      <br>
       <button class="delete-sticker-btn" data-id="${s.id}">🗑 Delete</button>
+      <br><br>
     </div>
   `).join('');
 }
