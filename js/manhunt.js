@@ -11,7 +11,8 @@ let seekerWatchId    = null;
 let seekerLat        = null;
 let seekerLng        = null;
 let lastLocationSent = 0;
-const LOCATION_INTERVAL_MS = 5000; // update box every 5 seconds max
+let expiryInterval   = null;
+const LOCATION_INTERVAL_MS = 5000;
 
 const MANHUNT_RADIUS_METERS = { small: 200, medium: 500, large: 1000 };
 
@@ -92,6 +93,7 @@ export async function startManhunt() {
     startLocationTracking(inserted.id, draft.radiusMeters);
     subscribeToManhuntUpdates();
     startSeekerTracking();
+    startExpiryTimer();
     alert('🏃 Manhunt started. Your location is now being tracked live.');
 
   }, (err) => {
@@ -131,6 +133,28 @@ function startLocationTracking(manhuntId, radiusMeters) {
     enableHighAccuracy: true,
     maximumAge:         0,
   });
+}
+
+// ── EXPIRY TIMER ─────────────────────────────────────
+function startExpiryTimer() {
+  stopExpiryTimer();
+  if (!activeManhunt?.expires_at) return;
+
+  expiryInterval = setInterval(() => {
+    if (!activeManhunt?.expires_at) return;
+    if (new Date(activeManhunt.expires_at) <= new Date()) {
+      stopExpiryTimer();
+      alert('⏰ Manhunt time is up! Hunt ended automatically.');
+      endManhunt();
+    }
+  }, 10000); // check every 10 seconds
+}
+
+function stopExpiryTimer() {
+  if (expiryInterval !== null) {
+    clearInterval(expiryInterval);
+    expiryInterval = null;
+  }
 }
 
 // ── DISTANCE DISPLAY ─────────────────────────────────
@@ -212,6 +236,7 @@ export async function loadManhuntFromSupabase() {
   showManhuntOnMap(data, true);
   subscribeToManhuntUpdates();
   startSeekerTracking();
+  startExpiryTimer();
 }
 
 function stopSeekerTracking() {
@@ -308,6 +333,7 @@ export async function endManhunt() {
     locationWatchId = null;
   }
   stopSeekerTracking();
+  stopExpiryTimer();
 
   activeManhunt = null;
   manhuntDraft  = null;
