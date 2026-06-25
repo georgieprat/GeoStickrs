@@ -11,7 +11,7 @@ let clusterGroup  = null;
 export function init(mapInstance, lobbyRef) {
   map          = mapInstance;
   currentLobby = lobbyRef;
-  clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40 });
+  clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40, showCoverageOnHover: false });
   map.addLayer(clusterGroup);
 
   // Pre-fill username from lobby session
