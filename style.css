@@ -376,6 +376,15 @@ body {
   text-overflow: ellipsis;
 }
 
+#leaderboard-list li .lb-name-link {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+#leaderboard-list li .lb-name-link:hover {
+  color: #2563eb;
+}
+
 #leaderboard-list li .lb-score {
   font-weight: 600;
   color: #52525b;
@@ -1390,6 +1399,49 @@ input[type="text"]:focus {
 }
 
 /* #landmark-panel shares .game-panel-* styles above */
+
+/* ── PHOTO LIGHTBOX ──────────────────────────────────── */
+#photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#photo-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+}
+
+#photo-lightbox-img {
+  position: relative;
+  max-width: 92vw;
+  max-height: 88vh;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  object-fit: contain;
+}
+
+#photo-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* ── MANHUNT MOBILE FAB ──────────────────────────────── */
 #manhunt-mobile-fab {

@@ -7,6 +7,7 @@ let map           = null;
 let currentLobby  = null;
 let previewMarker = null;
 let clusterGroup  = null;
+const markersByUser = {}; // username → most recent marker
 
 export function init(mapInstance, lobbyRef) {
   map          = mapInstance;
@@ -367,11 +368,28 @@ export function addMarkerToMap(s) {
       🏆 <strong>${s.score} pts</strong>
       ${s.photo_url
         ? `<br><img src="${s.photo_url}"
-            style="max-width:160px;margin-top:6px;border-radius:6px;display:block;">`
+            onclick="window._openPhotoLightbox('${s.photo_url}')"
+            style="max-width:160px;margin-top:6px;border-radius:6px;display:block;cursor:pointer;">`
         : ''}
     </div>
   `);
+  marker.on('click', () => {
+    map.setView([s.lat, s.lng]);
+  });
+
+  // stickers are loaded newest-first, so first one per user = most recent
+  if (!markersByUser[s.username]) markersByUser[s.username] = marker;
 }
+
+export function flyToUser(username) {
+  const marker = markersByUser[username];
+  if (!marker) return;
+  clusterGroup.zoomToShowLayer(marker, () => {
+    map.setView(marker.getLatLng());
+    marker.openPopup();
+  });
+}
+window._flyToUser = flyToUser;
 
 export async function loadAllStickers() {
   const { data, error } = await supabase
@@ -455,10 +473,11 @@ const { data, error } = await query.order('score', { ascending: false });
     ? '<li class="loading">No stickers yet!</li>'
     : entries.map((s, i) => {
         const color = usernameToColor(s.username);
+        const escaped = s.username.replace(/'/g, "\\'");
         return `<li>
           <span class="lb-rank">${['🥇','🥈','🥉','4.','5.'][i]}</span>
           <span class="lb-dot" style="background:${color.fill};border-color:${color.border};"></span>
-          <span class="lb-name">${s.username}</span>
+          <span class="lb-name lb-name-link" onclick="window._flyToUser('${escaped}')">${s.username}</span>
           <span class="lb-score">${s.score} pts</span>
         </li>`;
       }).join('');
@@ -512,3 +531,22 @@ export function showStepError(step, msg) {
   const el = document.getElementById(`step-${step}-error`);
   if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
+
+// ── PHOTO LIGHTBOX ────────────────────────────────────
+window._openPhotoLightbox = function(url) {
+  const lightbox = document.getElementById('photo-lightbox');
+  const img      = document.getElementById('photo-lightbox-img');
+  img.src = url;
+  lightbox.style.display = 'flex';
+};
+
+function closeLightbox() {
+  document.getElementById('photo-lightbox').style.display = 'none';
+}
+
+document.getElementById('photo-lightbox-backdrop')?.addEventListener('click', closeLightbox);
+document.getElementById('photo-lightbox-close')?.addEventListener('click', closeLightbox);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeLightbox();
+});
