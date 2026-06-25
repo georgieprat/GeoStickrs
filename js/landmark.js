@@ -142,6 +142,21 @@ export async function loadLandmarkSubmissions() {
   `).join('');
 }
 
+function calcLandmarkScore(subLat, subLng, huntLat, huntLng) {
+  // Haversine distance in meters
+  const R = 6371000;
+  const dLat = (huntLat - subLat) * Math.PI / 180;
+  const dLng = (huntLng - subLng) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(subLat * Math.PI/180) * Math.cos(huntLat * Math.PI/180) * Math.sin(dLng/2)**2;
+  const distMeters = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  // 150 pts at 0m, 50 pts at 500m+
+  const maxDist = 500;
+  const distScore = Math.max(0, Math.floor((1 - Math.min(distMeters, maxDist) / maxDist) * 100));
+  return { score: 50 + distScore, distMeters: Math.round(distMeters) };
+}
+
 export async function approveLandmarkSubmission(id) {
   await supabase.from('landmark_submissions').update({ status: 'approved' }).eq('id', id);
 
@@ -149,21 +164,31 @@ export async function approveLandmarkSubmission(id) {
     .from('landmark_submissions').select('*').eq('id', id).single();
 
   if (sub) {
-    // score: 0 — scoring is handled by another team member
+    const { data: hunt } = await supabase
+      .from('landmark_hunts').select('lat, lng').eq('id', sub.hunt_id).single();
+
+    const { score, distMeters } = hunt
+      ? calcLandmarkScore(sub.lat, sub.lng, hunt.lat, hunt.lng)
+      : { score: 100, distMeters: null };
+
     const { data: newSticker } = await supabase.from('stickers').insert([{
       username:  sub.username,
       lat:       sub.lat,
       lng:       sub.lng,
       photo_url: sub.photo_url,
-      score:     0,
+      score,
       lobby:     sub.lobby,
       mode:      'landmark',
     }]).select().single();
 
     if (newSticker) addMarkerToMap(newSticker);
+
+    const distInfo = distMeters !== null ? ` (${distMeters} m from sticker)` : '';
+    alert(`✅ Submission approved! Score: ${score} pts${distInfo}`);
+  } else {
+    alert('✅ Submission approved!');
   }
 
-  alert('✅ Submission approved!');
   loadLandmarkSubmissions();
 }
 
@@ -192,9 +217,9 @@ export function subscribeToSubmissionUpdates() {
       if (row.username !== username || row.lobby !== lobby.name) return;
 
       if (row.status === 'approved') {
-        showToast('✅ Dein Landmark-Fund wurde bestätigt! Sticker posted.');
+        showToast('✅ Your Landmark find was approved! Sticker posted.');
       } else if (row.status === 'rejected') {
-        showToast('❌ Dein Landmark-Fund wurde leider abgelehnt.');
+        showToast('❌ Your Landmark find was rejected.');
       }
     })
     .subscribe();
