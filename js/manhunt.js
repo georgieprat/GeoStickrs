@@ -13,6 +13,7 @@ let seekerLng        = null;
 let lastLocationSent = 0;
 let expiryInterval   = null;
 let countdownInterval = null;
+let myLocationMarker = null;
 const LOCATION_INTERVAL_MS = 5000;
 
 const MANHUNT_RADIUS_METERS = { tiny: 20, small: 200, medium: 500, large: 1000 };
@@ -31,6 +32,8 @@ export function initManhunt(mapInstance) {
       const isVisible = panel.style.display === 'block';
       panel.style.display = isVisible ? 'none' : 'block';
     });
+
+  subscribeLobbyManhunt();
 }
 
 function isMobile() {
@@ -258,10 +261,37 @@ function startSeekerTracking() {
     seekerLat = pos.coords.latitude;
     seekerLng = pos.coords.longitude;
     updateDistanceDisplay();
+    updateMyLocationMarker(seekerLat, seekerLng);
   }, (err) => console.error('Seeker GPS error:', err), {
     enableHighAccuracy: true,
     maximumAge: 5000,
   });
+}
+
+function updateMyLocationMarker(lat, lng) {
+  if (!map) return;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="
+      width:16px;height:16px;border-radius:50%;
+      background:#3b82f6;border:3px solid #fff;
+      box-shadow:0 0 0 3px rgba(59,130,246,0.35);
+    "></div>`,
+    iconSize: [16,16], iconAnchor: [8,8],
+  });
+  if (myLocationMarker) {
+    myLocationMarker.setLatLng([lat, lng]);
+  } else {
+    myLocationMarker = L.marker([lat, lng], { icon, zIndexOffset: 500 }).addTo(map);
+    myLocationMarker.bindTooltip('You', { permanent: false, direction: 'top' });
+  }
+}
+
+function removeMyLocationMarker() {
+  if (myLocationMarker && map) {
+    map.removeLayer(myLocationMarker);
+    myLocationMarker = null;
+  }
 }
 
 // ── REALTIME SUBSCRIPTION (Seekers) ──────────────────
@@ -289,6 +319,25 @@ function subscribeToManhuntUpdates() {
       activeManhunt = { ...activeManhunt, ...updated };
       showManhuntOnMap(updated, false);
       updateDistanceDisplay();
+    })
+    .subscribe();
+}
+
+// ── LOBBY-LEVEL SUBSCRIPTION (auto-show for all players) ─
+function subscribeLobbyManhunt() {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby) return;
+
+  supabase
+    .channel('manhunt-lobby-' + lobby.name)
+    .on('postgres_changes', {
+      event:  'INSERT',
+      schema: 'public',
+      table:  'manhunts',
+      filter: `lobby=eq.${lobby.name}`,
+    }, () => {
+      // New hunt started — load it for everyone
+      loadManhuntFromSupabase();
     })
     .subscribe();
 }
@@ -338,6 +387,7 @@ function stopSeekerTracking() {
   }
   seekerLat = null;
   seekerLng = null;
+  removeMyLocationMarker();
 }
 
 // ── SHOW ON MAP ──────────────────────────────────────
@@ -367,6 +417,10 @@ function showManhuntOnMap(manhunt, panToBox = false) {
 function checkManhuntCaught() {
   if (!activeManhunt) { alert('No active manhunt loaded.'); return; }
   if (!navigator.geolocation) { alert('GPS not available.'); return; }
+  const hiderManhuntId = sessionStorage.getItem('geostickrs_hider_manhunt_id');
+  if (hiderManhuntId && String(hiderManhuntId) === String(activeManhunt.id)) {
+    alert("🙈 You're the hider — you can't catch yourself!"); return;
+  }
 
   navigator.geolocation.getCurrentPosition((pos) => {
     const hunterLat  = pos.coords.latitude;
