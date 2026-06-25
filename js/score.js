@@ -3,11 +3,18 @@
 // the lobby's home point and the location's elevation.
 
 export async function calculateScore(lat, lng, homeLat, homeLng) {
-  let score = 0;
+  let score = 1;
+  const MAX_DISTANCE = 20000;
+
+  const t = Math.min(distKm / MAX_DISTANCE, 1);
+  const eased = Math.sqrt(t); // or Math.pow(t, 0.6)
 
   // Distance bonus: 1 pt per 100 km, max 50 pts
   const distKm = getDistanceKm(lat, lng, homeLat, homeLng) ;
-  score += Math.min(Math.round(distKm / 100), 100);
+  //score += Math.min(Math.round(distKm / 100), 100);
+  const t = Math.min(distKm / MAX_DISTANCE, 1);
+  const eased = Math.sqrt(t); // or Math.pow(t, 0.6)
+  score += eased * 100;
 
   // Remoteness bonus: +10 pts if over 1000 km from home
   //if (distKm > 1000) score += 10;
