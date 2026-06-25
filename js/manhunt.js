@@ -30,6 +30,7 @@ export function initManhunt(mapInstance) {
     ?.addEventListener('click', () => {
       const panel = document.getElementById('manhunt-panel');
       const isVisible = panel.style.display === 'block';
+      if (!isVisible) updateManhuntPanelRole();
       panel.style.display = isVisible ? 'none' : 'block';
     });
 
@@ -40,9 +41,21 @@ function isMobile() {
   return window.innerWidth <= 600;
 }
 
+function updateManhuntPanelRole() {
+  if (!activeManhunt) return;
+  const isHider = String(sessionStorage.getItem('geostickrs_hider_manhunt_id')) === String(activeManhunt.id);
+  document.getElementById('btn-manhunt-caught').style.display  = isHider ? 'none'  : 'block';
+  const note = document.getElementById('manhunt-hider-note');
+  if (note) note.style.display = isHider ? 'block' : 'none';
+  document.getElementById('manhunt-hint').textContent = isHider
+    ? 'Keep moving — seekers are looking for you!'
+    : 'Search inside the red area. Find the hider and press Caught!';
+}
+
 function showManhuntUI() {
   const panel = document.getElementById('manhunt-panel');
   const fab   = document.getElementById('manhunt-mobile-fab');
+  updateManhuntPanelRole();
   if (isMobile()) {
     fab.style.display   = 'flex';
     panel.style.display = 'none';
@@ -409,24 +422,6 @@ function showManhuntOnMap(manhunt, panToBox = false) {
   if (panToBox) map.fitBounds(bounds);
 
   document.getElementById('manhunt-status').textContent = 'Active manhunt — live tracking';
-
-  const isHider = sessionStorage.getItem('geostickrs_hider_manhunt_id') &&
-    String(sessionStorage.getItem('geostickrs_hider_manhunt_id')) === String(manhunt.id);
-
-  const hintEl   = document.getElementById('manhunt-hint');
-  const caughtBtn = document.getElementById('btn-manhunt-caught');
-  const hiderNote = document.getElementById('manhunt-hider-note');
-
-  if (isHider) {
-    hintEl.textContent          = 'Keep moving — seekers are looking for you!';
-    caughtBtn.style.display     = 'none';
-    if (hiderNote) hiderNote.style.display = 'block';
-  } else {
-    hintEl.textContent          = 'Search inside the red area. Find the hider and press Caught!';
-    caughtBtn.style.display     = 'block';
-    if (hiderNote) hiderNote.style.display = 'none';
-  }
-
   showManhuntUI();
 }
 
