@@ -313,18 +313,48 @@ export function placePreviewMarker(lat, lng) {
 
 export function addMarkerToMap(s) {
   const color = usernameToColor(s.username);
-  const icon  = L.divIcon({
+  const initial = (s.username?.trim()?.charAt(0) || '?').toUpperCase();
+
+  const icon = L.divIcon({
     className: '',
-    html: `<div style="
-      width:22px; height:22px;
-      border-radius:50% 50% 50% 0;
-      transform:rotate(-45deg);
-      background:${color.fill};
-      border:2.5px solid ${color.border};
-      box-shadow:0 2px 6px rgba(0,0,0,0.25);
-    "></div>`,
-    iconSize:    [22, 22],
-    iconAnchor:  [11, 22],
+    html: `
+      <div style="
+        position:relative;
+        width:22px;
+        height:22px;
+      ">
+        <div style="
+          width:22px;
+          height:22px;
+          border-radius:50% 50% 50% 0;
+          transform:rotate(-45deg);
+          background:${color.fill};
+          border:2.5px solid ${color.border};
+          box-shadow:0 2px 6px rgba(0,0,0,0.25);
+        "></div>
+
+        <div style="
+          position:absolute;
+          top:2px;
+          left:2px;
+          width:18px;
+          height:18px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:11px;
+          font-weight:700;
+          color:white;
+          text-shadow:0 1px 2px rgba(0,0,0,0.6);
+          transform:rotate(45deg);
+          pointer-events:none;
+        ">
+          ${initial}
+        </div>
+      </div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
     popupAnchor: [0, -24],
   });
 
