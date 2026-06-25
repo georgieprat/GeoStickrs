@@ -52,7 +52,7 @@ const topo = L.tileLayer(
 cartoLight.addTo(map);
 
 // Umschalter
-L.control.layers(
+const layerControl = L.control.layers(
   {
     "🌙 Light": cartoLight,
     "🗺️ OpenStreetMap": osm,
@@ -65,6 +65,16 @@ L.control.layers(
     position: 'topleft'
   }
 ).addTo(map);
+
+// Auto-collapse after selecting a basemap on touch devices
+const isTouchDevice =
+  'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+if (isTouchDevice) {
+  map.on('baselayerchange', () => {
+    layerControl.collapse();
+  });
+}
 
   const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
 
