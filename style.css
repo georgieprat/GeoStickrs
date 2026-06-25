@@ -12,10 +12,19 @@ body {
   position: fixed;
   inset: 0;
   background: #f4f4f5;
+
+  display: flex;
+  flex-direction: column;   /* important */
+  align-items: center;
+
+  z-index: 100;
+}
+
+#lobby-content {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
 }
 
 #lobby-card {
@@ -30,6 +39,20 @@ body {
   align-items: center;
   gap: 16px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+#lobby-screen-legal {
+  margin-top: auto;   /* pushes it to bottom */
+  width: 100%;        /* full width of screen */
+  max-width: none;    /* removes boundary feel */
+  
+  background: #fff;
+  border: 1px solid #e4e4e7;
+  border-radius: 0;    /* optional: feels more "footer-like" */
+  padding: 16px 24px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.08);
+
   text-align: center;
 }
 
