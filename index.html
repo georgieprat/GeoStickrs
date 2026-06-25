@@ -385,6 +385,9 @@
     <p id="manhunt-hint">Find the hider inside the red search area.</p>
     <p id="manhunt-distance" style="margin-top:6px;font-weight:600;color:#ef4444;"></p>
   </div>
+  <p id="manhunt-hider-note" style="display:none;font-weight:700;color:#ef4444;text-align:center;margin-top:6px;">
+    🙈 You are the hider!
+  </p>
   <button id="btn-manhunt-caught" class="btn-primary game-panel-btn">
     📸 Caught!
   </button>
@@ -408,6 +411,31 @@
   <button id="btn-lsh-found" class="btn-primary game-panel-btn">
     🔍 I think I found it!
   </button>
+</div>
+
+<!-- MANHUNT CAUGHT MODAL (photo proof) -->
+<div id="manhunt-caught-modal" style="display:none;">
+  <div class="step-card">
+    <div class="step-header">
+      <span class="step-icon">📸</span>
+      <h2>Caught!</h2>
+      <p>Take a photo as proof</p>
+    </div>
+    <div id="manhunt-caught-preview-wrap" style="display:none;">
+      <img id="manhunt-caught-preview" alt="Preview">
+    </div>
+    <div class="camera-buttons">
+      <button id="btn-manhunt-caught-camera" class="btn-secondary">📷 Take photo</button>
+      <button id="btn-manhunt-caught-upload" class="btn-secondary">🖼 Upload image</button>
+    </div>
+    <input type="file" id="manhunt-caught-camera-input" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="manhunt-caught-file-input" accept="image/*" style="display:none;">
+    <p id="manhunt-caught-status" style="font-size:13px;color:#52525b;margin-top:8px;"></p>
+    <div class="step-actions">
+      <button id="btn-manhunt-caught-cancel" class="btn-secondary">Cancel</button>
+      <button id="btn-manhunt-caught-submit" class="btn-primary" disabled>Submit 🚀</button>
+    </div>
+  </div>
 </div>
 
 <!-- FOUND MODAL (player photo submission) -->

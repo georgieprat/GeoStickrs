@@ -249,8 +249,8 @@ function updateDistanceDisplay() {
   const el = document.getElementById('manhunt-distance');
   if (!el) return;
   const label = dist < 1000
-    ? `📍 ~${Math.round(dist)} m vom Hider`
-    : `📍 ~${(dist / 1000).toFixed(1)} km vom Hider`;
+    ? `📍 ~${Math.round(dist)} m from the hider`
+    : `📍 ~${(dist / 1000).toFixed(1)} km from the hider`;
   el.textContent = label;
 }
 
@@ -409,11 +409,30 @@ function showManhuntOnMap(manhunt, panToBox = false) {
   if (panToBox) map.fitBounds(bounds);
 
   document.getElementById('manhunt-status').textContent = 'Active manhunt — live tracking';
-  document.getElementById('manhunt-hint').textContent   = 'Search inside the red area. Find the hider and press Caught!';
+
+  const isHider = sessionStorage.getItem('geostickrs_hider_manhunt_id') &&
+    String(sessionStorage.getItem('geostickrs_hider_manhunt_id')) === String(manhunt.id);
+
+  const hintEl   = document.getElementById('manhunt-hint');
+  const caughtBtn = document.getElementById('btn-manhunt-caught');
+  const hiderNote = document.getElementById('manhunt-hider-note');
+
+  if (isHider) {
+    hintEl.textContent          = 'Keep moving — seekers are looking for you!';
+    caughtBtn.style.display     = 'none';
+    if (hiderNote) hiderNote.style.display = 'block';
+  } else {
+    hintEl.textContent          = 'Search inside the red area. Find the hider and press Caught!';
+    caughtBtn.style.display     = 'block';
+    if (hiderNote) hiderNote.style.display = 'none';
+  }
+
   showManhuntUI();
 }
 
 // ── CAUGHT CHECK ─────────────────────────────────────
+let caughtPos = null;
+
 function checkManhuntCaught() {
   if (!activeManhunt) { alert('No active manhunt loaded.'); return; }
   if (!navigator.geolocation) { alert('GPS not available.'); return; }
@@ -423,33 +442,102 @@ function checkManhuntCaught() {
   }
 
   navigator.geolocation.getCurrentPosition((pos) => {
-    const hunterLat  = pos.coords.latitude;
-    const hunterLng  = pos.coords.longitude;
-    const lobby      = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-    const winnerName = lobby?.username || localStorage.getItem('geostickrs_username') || 'Hunter';
-
     const distance = map.distance(
-      [hunterLat, hunterLng],
+      [pos.coords.latitude, pos.coords.longitude],
       [activeManhunt.hider_lat, activeManhunt.hider_lng]
     );
 
     if (distance <= 50) {
-      alert(`🏆 Hider caught! +100 pts! Distance: ${Math.round(distance)} m`);
-      saveManhuntScore(hunterLat, hunterLng, winnerName);
-      endManhunt();
+      caughtPos = pos;
+      openCaughtModal();
     } else {
       alert(`❌ Not close enough. Distance: ${Math.round(distance)} m`);
     }
   }, (err) => alert('GPS error: ' + err.message));
 }
 
+function openCaughtModal() {
+  // reset state
+  document.getElementById('manhunt-caught-preview-wrap').style.display = 'none';
+  document.getElementById('manhunt-caught-preview').src = '';
+  document.getElementById('manhunt-caught-camera-input').value = '';
+  document.getElementById('manhunt-caught-file-input').value = '';
+  document.getElementById('manhunt-caught-status').textContent = '';
+  document.getElementById('btn-manhunt-caught-submit').disabled = true;
+  document.getElementById('manhunt-caught-modal').style.display = 'flex';
+}
+
+function closeCaughtModal() {
+  document.getElementById('manhunt-caught-modal').style.display = 'none';
+  caughtPos = null;
+}
+
+// ── CAUGHT MODAL WIRING ───────────────────────────────
+let caughtPhotoFile = null;
+
+document.getElementById('btn-manhunt-caught-camera')
+  ?.addEventListener('click', () => document.getElementById('manhunt-caught-camera-input').click());
+
+document.getElementById('btn-manhunt-caught-upload')
+  ?.addEventListener('click', () => document.getElementById('manhunt-caught-file-input').click());
+
+['manhunt-caught-camera-input', 'manhunt-caught-file-input'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    caughtPhotoFile = file;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById('manhunt-caught-preview').src = ev.target.result;
+      document.getElementById('manhunt-caught-preview-wrap').style.display = 'block';
+      document.getElementById('btn-manhunt-caught-submit').disabled = false;
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+document.getElementById('btn-manhunt-caught-cancel')
+  ?.addEventListener('click', closeCaughtModal);
+
+document.getElementById('btn-manhunt-caught-submit')
+  ?.addEventListener('click', async () => {
+    if (!caughtPos || !caughtPhotoFile) return;
+    const btn = document.getElementById('btn-manhunt-caught-submit');
+    btn.disabled = true;
+    btn.textContent = '⏳ Submitting…';
+    document.getElementById('manhunt-caught-status').textContent = 'Uploading photo…';
+
+    try {
+      const lobby      = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+      const winnerName = lobby?.username || 'Hunter';
+      const lobbyFolder = lobby.name.replace(/\s+/g, '_').toLowerCase();
+      const fileName    = `${lobbyFolder}/manhunt_${Date.now()}_${caughtPhotoFile.name.replace(/\s/g,'_')}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(fileName, caughtPhotoFile, { cacheControl: '3600', upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
+
+      await saveManhuntScore(caughtPos.coords.latitude, caughtPos.coords.longitude, winnerName, urlData.publicUrl);
+      closeCaughtModal();
+      endManhunt();
+    } catch (err) {
+      console.error(err);
+      document.getElementById('manhunt-caught-status').textContent = `Error: ${err.message}`;
+      btn.disabled = false;
+      btn.textContent = 'Submit 🚀';
+    }
+  });
+
 // ── SAVE SCORE ───────────────────────────────────────
-async function saveManhuntScore(lat, lng, username) {
+async function saveManhuntScore(lat, lng, username, photoUrl = null) {
   const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
   if (!lobby) return;
 
   const { error } = await supabase.from('stickers').insert([{
-    username, lat, lng, photo_url: null, score: 100,
+    username, lat, lng, photo_url: photoUrl, score: 100,
     lobby: lobby.name, mode: 'manhunt',
   }]);
 
