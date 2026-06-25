@@ -18,9 +18,53 @@ function initMap() {
 
   map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
   L.control.zoom({ position: 'bottomright' }).addTo(map);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+
+
+  const cartoLight = L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  {
     attribution: '© OpenStreetMap © CARTO',
-  }).addTo(map);
+  }
+);
+
+const osm = L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {
+    attribution: '© OpenStreetMap contributors',
+  }
+);
+
+const satellite = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: '© Esri',
+  }
+);
+
+const topo = L.tileLayer(
+  'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  {
+    attribution: '© OpenTopoMap',
+  }
+);
+
+// Standardkarte
+cartoLight.addTo(map);
+
+// Umschalter
+L.control.layers(
+  {
+    "🌙 Light": cartoLight,
+    "🗺️ OpenStreetMap": osm,
+    "🛰️ Satellite": satellite,
+    "⛰️ Topographic": topo,
+  },
+  null,
+  {
+    collapsed: false,
+    position: 'bottomleft'
+  }
+).addTo(map);
 
   const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
 
