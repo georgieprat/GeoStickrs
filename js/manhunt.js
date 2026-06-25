@@ -49,7 +49,7 @@ function updateManhuntPanelRole() {
   if (note) note.style.display = isHider ? 'block' : 'none';
   document.getElementById('manhunt-hint').textContent = isHider
     ? 'Keep moving — seekers are looking for you!'
-    : 'Search inside the red area. Find the hider and press Caught!';
+    : `Find ${activeManhunt.hider_name} inside the red area and press Caught!`;
 }
 
 function showManhuntUI() {
@@ -122,7 +122,7 @@ export async function startManhunt() {
     const { data: inserted, error } = await supabase.from('manhunts').insert([{
       lobby:       lobby.name,
       active:      true,
-      hider_name:  'Hider',
+      hider_name:  lobby.username || 'Hider',
       hider_lat:   lat,
       hider_lng:   lng,
       box_geojson: box,
