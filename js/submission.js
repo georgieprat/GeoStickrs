@@ -6,10 +6,13 @@ import { calculateScore } from './score.js';
 let map           = null;
 let currentLobby  = null;
 let previewMarker = null;
+let clusterGroup  = null;
 
 export function init(mapInstance, lobbyRef) {
   map          = mapInstance;
   currentLobby = lobbyRef;
+  clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40 });
+  map.addLayer(clusterGroup);
 
   // Pre-fill username from lobby session
   const lobbyData = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
@@ -325,7 +328,8 @@ export function addMarkerToMap(s) {
     popupAnchor: [0, -24],
   });
 
-  const marker = L.marker([s.lat, s.lng], { icon }).addTo(map);
+  const marker = L.marker([s.lat, s.lng], { icon });
+  clusterGroup.addLayer(marker);
   marker.bindPopup(`
     <div style="font-family:sans-serif;font-size:13px;max-width:180px;line-height:1.5;">
       <span style="display:inline-block;width:10px;height:10px;border-radius:50%;

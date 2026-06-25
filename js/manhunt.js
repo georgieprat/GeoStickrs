@@ -24,6 +24,34 @@ export function initManhunt(mapInstance) {
 
   document.getElementById('btn-manhunt-caught')
     ?.addEventListener('click', checkManhuntCaught);
+
+  document.getElementById('manhunt-mobile-fab')
+    ?.addEventListener('click', () => {
+      const panel = document.getElementById('manhunt-panel');
+      const isVisible = panel.style.display === 'block';
+      panel.style.display = isVisible ? 'none' : 'block';
+    });
+}
+
+function isMobile() {
+  return window.innerWidth <= 600;
+}
+
+function showManhuntUI() {
+  const panel = document.getElementById('manhunt-panel');
+  const fab   = document.getElementById('manhunt-mobile-fab');
+  if (isMobile()) {
+    fab.style.display   = 'flex';
+    panel.style.display = 'none';
+  } else {
+    fab.style.display   = 'none';
+    panel.style.display = 'block';
+  }
+}
+
+function hideManhuntUI() {
+  document.getElementById('manhunt-panel').style.display        = 'none';
+  document.getElementById('manhunt-mobile-fab').style.display   = 'none';
 }
 
 // ── BUTTON STATE ─────────────────────────────────────
@@ -146,11 +174,15 @@ function startCountdown() {
   function tick() {
     if (!activeManhunt?.expires_at) {
       el.textContent = '∞ No time limit';
+      const fab = document.getElementById('manhunt-fab-timer');
+      if (fab) fab.textContent = '∞';
       return;
     }
     const remaining = new Date(activeManhunt.expires_at) - new Date();
     if (remaining <= 0) {
       el.textContent = '⏰ Time up!';
+      const fab = document.getElementById('manhunt-fab-timer');
+      if (fab) fab.textContent = '⏰';
       stopCountdown();
       return;
     }
@@ -158,9 +190,14 @@ function startCountdown() {
     const h = Math.floor(totalSec / 3600);
     const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
-    el.textContent = h > 0
+    const timeStr = h > 0
       ? `⏱ ${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
       : `⏱ ${m}:${String(s).padStart(2,'0')}`;
+    el.textContent = timeStr;
+    const fab = document.getElementById('manhunt-fab-timer');
+    if (fab) fab.textContent = h > 0
+      ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${m}:${String(s).padStart(2,'0')}`;
   }
 
   tick();
@@ -241,7 +278,7 @@ function subscribeToManhuntUpdates() {
       const updated = payload.new;
       if (!updated.active) {
         if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) map.removeLayer(manhuntBoxLayer);
-        document.getElementById('manhunt-panel').style.display = 'none';
+        hideManhuntUI();
         document.getElementById('manhunt-distance').textContent = '';
         stopSeekerTracking();
         activeManhunt = null;
@@ -308,9 +345,9 @@ function showManhuntOnMap(manhunt, panToBox = false) {
 
   if (panToBox) map.fitBounds(bounds);
 
-  document.getElementById('manhunt-panel').style.display = 'block';
-  document.getElementById('manhunt-status').textContent  = 'Active manhunt — live tracking';
-  document.getElementById('manhunt-hint').textContent    = 'Search inside the red area. Find the hider and press Caught!';
+  document.getElementById('manhunt-status').textContent = 'Active manhunt — live tracking';
+  document.getElementById('manhunt-hint').textContent   = 'Search inside the red area. Find the hider and press Caught!';
+  showManhuntUI();
 }
 
 // ── CAUGHT CHECK ─────────────────────────────────────
@@ -381,8 +418,8 @@ export async function endManhunt() {
   activeManhunt = null;
   manhuntDraft  = null;
 
-  document.getElementById('manhunt-panel').style.display   = 'none';
-  document.getElementById('manhunt-distance').textContent  = '';
+  hideManhuntUI();
+  document.getElementById('manhunt-distance').textContent = '';
   updateManhuntButtons('create');
   alert('🛑 Manhunt ended.');
 }

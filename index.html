@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>GeoStickrs</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
@@ -363,6 +365,11 @@
   </div>
 </div>
 
+<!-- MANHUNT MOBILE FAB (mobile only, shown when manhunt active) -->
+<button id="manhunt-mobile-fab" style="display:none;">
+  🏃 <span id="manhunt-fab-timer"></span>
+</button>
+
 <!-- MANHUNT PLAYER PANEL -->
 <div id="manhunt-panel" style="display:none;">
   <div class="game-panel-header">
@@ -561,6 +568,7 @@
 
   <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
   <script src="https://unpkg.com/osmtogeojson@3.0.0-beta.5/osmtogeojson.js"></script>
   <script type="module" src="script.js"></script>
