@@ -15,7 +15,7 @@ let expiryInterval   = null;
 let countdownInterval = null;
 const LOCATION_INTERVAL_MS = 5000;
 
-const MANHUNT_RADIUS_METERS = { small: 200, medium: 500, large: 1000 };
+const MANHUNT_RADIUS_METERS = { tiny: 20, small: 200, medium: 500, large: 1000 };
 
 // ── INIT ─────────────────────────────────────────────
 export function initManhunt(mapInstance) {
@@ -117,6 +117,7 @@ export async function startManhunt() {
 
     manhuntDraft  = null;
     activeManhunt = inserted;
+    sessionStorage.setItem('geostickrs_hider_manhunt_id', inserted.id);
     updateManhuntButtons('stop');
     showManhuntOnMap(inserted, true);
     startLocationTracking(inserted.id, draft.radiusMeters);
@@ -316,6 +317,18 @@ export async function loadManhuntFromSupabase() {
   startSeekerTracking();
   startExpiryTimer();
   startCountdown();
+
+  // Rejoin as hider: restart location tracking if this device started the hunt
+  const hiderManhuntId = sessionStorage.getItem('geostickrs_hider_manhunt_id');
+  if (hiderManhuntId && String(hiderManhuntId) === String(data.id)) {
+    const radiusMeters = Math.round(
+      Math.max(
+        Math.abs(data.box_geojson.north - data.box_geojson.south),
+        Math.abs(data.box_geojson.east  - data.box_geojson.west)
+      ) / 2 * 111000
+    );
+    startLocationTracking(data.id, radiusMeters);
+  }
 }
 
 function stopSeekerTracking() {
@@ -417,6 +430,7 @@ export async function endManhunt() {
 
   activeManhunt = null;
   manhuntDraft  = null;
+  sessionStorage.removeItem('geostickrs_hider_manhunt_id');
 
   hideManhuntUI();
   document.getElementById('manhunt-distance').textContent = '';
