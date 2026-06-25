@@ -44,12 +44,26 @@ function isMobile() {
 function updateManhuntPanelRole() {
   if (!activeManhunt) return;
   const isHider = String(sessionStorage.getItem('geostickrs_hider_manhunt_id')) === String(activeManhunt.id);
-  document.getElementById('btn-manhunt-caught').style.display  = isHider ? 'none'  : 'block';
+
+  document.getElementById('btn-manhunt-caught').style.display = isHider ? 'none' : 'block';
+
   const note = document.getElementById('manhunt-hider-note');
   if (note) note.style.display = isHider ? 'block' : 'none';
+
+  const targetEl     = document.getElementById('manhunt-target');
+  const targetNameEl = document.getElementById('manhunt-target-name');
+  if (targetEl && targetNameEl) {
+    if (isHider) {
+      targetEl.style.display = 'none';
+    } else {
+      targetNameEl.textContent = activeManhunt.hider_name;
+      targetEl.style.display   = 'block';
+    }
+  }
+
   document.getElementById('manhunt-hint').textContent = isHider
     ? 'Keep moving — seekers are looking for you!'
-    : `Find ${activeManhunt.hider_name} inside the red area and press Caught!`;
+    : 'Search inside the red area and press Caught!';
 }
 
 function showManhuntUI() {
