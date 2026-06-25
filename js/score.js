@@ -20,7 +20,7 @@ export async function calculateScore(lat, lng, homeLat, homeLng) {
     const data = await res.json();
     let elevation = Math.max(0, data.elevation?.[0] ?? 0);
     if (elevation >= 2000) {
-      score = score * (1 + (Math.min(Math.floor(elevation / 1000), 9)/10));
+      score = Math.floor(score * (1 + (Math.min(Math.floor(elevation / 1000), 9)/10)));
     }
   } catch (e) { /* elevation is optional */ }
 
