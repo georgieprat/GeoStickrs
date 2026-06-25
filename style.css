@@ -1325,9 +1325,10 @@ input[type="text"]:focus {
     padding: 18px !important;
   }
 
-  /* Layer switcher: lift above game panels */
-  .leaflet-bottom.leaflet-left {
-    bottom: 140px !important;
+  /* Layer switcher: below zoom control, left side */
+  .leaflet-top.leaflet-left {
+    top: 14px;
+    left: 14px;
   }
 }
 
