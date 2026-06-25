@@ -93,7 +93,7 @@ export function createManhuntDraft() {
 
   updateManhuntButtons('start');
   alert(
-    `✅ Manhunt configured!\nRadius: ${manhuntDraft.radiusMeters} m — ` +
+    `✅ Move & Seek configured!\nRadius: ${manhuntDraft.radiusMeters} m — ` +
     `Duration: ${durationMin > 0 ? durationMin + ' min' : 'No limit'}\n\nPress Start when everyone is ready.`
   );
 }
@@ -129,7 +129,7 @@ export async function startManhunt() {
       expires_at:  expiresAt,
     }]).select().single();
 
-    if (error) { console.error(error); alert('Failed to start manhunt.'); return; }
+    if (error) { console.error(error); alert('Failed to start Move & Seek.'); return; }
 
     manhuntDraft  = null;
     activeManhunt = inserted;
@@ -141,7 +141,7 @@ export async function startManhunt() {
     startSeekerTracking();
     startExpiryTimer();
     startCountdown();
-    alert('🏃 Manhunt started. Your location is now being tracked live.');
+    alert('🏃 Move & Seek started. Your location is now being tracked live.');
 
   }, (err) => {
     console.error('GPS ERROR:', err);
@@ -239,7 +239,7 @@ function startExpiryTimer() {
     if (!activeManhunt?.expires_at) return;
     if (new Date(activeManhunt.expires_at) <= new Date()) {
       stopExpiryTimer();
-      alert('⏰ Manhunt time is up! Hunt ended automatically.');
+      alert('⏰ Move & Seek time is up! Hunt ended automatically.');
       endManhunt();
     }
   }, 10000); // check every 10 seconds
@@ -421,7 +421,7 @@ function showManhuntOnMap(manhunt, panToBox = false) {
 
   if (panToBox) map.fitBounds(bounds);
 
-  document.getElementById('manhunt-status').textContent = 'Active manhunt — live tracking';
+  document.getElementById('manhunt-status').textContent = 'Active Move & Seek — live tracking';
   showManhuntUI();
 }
 
@@ -429,7 +429,7 @@ function showManhuntOnMap(manhunt, panToBox = false) {
 let caughtPos = null;
 
 function checkManhuntCaught() {
-  if (!activeManhunt) { alert('No active manhunt loaded.'); return; }
+  if (!activeManhunt) { alert('No active Move & Seek loaded.'); return; }
   if (!navigator.geolocation) { alert('GPS not available.'); return; }
   const hiderManhuntId = sessionStorage.getItem('geostickrs_hider_manhunt_id');
   if (hiderManhuntId && String(hiderManhuntId) === String(activeManhunt.id)) {
@@ -551,7 +551,7 @@ export async function endManhunt() {
     .eq('lobby', lobby.name)
     .eq('active', true);
 
-  if (error) { console.error(error); alert('Failed to end manhunt.'); return; }
+  if (error) { console.error(error); alert('Failed to end Move & Seek.'); return; }
 
   if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) {
     map.removeLayer(manhuntBoxLayer);
@@ -572,5 +572,5 @@ export async function endManhunt() {
   hideManhuntUI();
   document.getElementById('manhunt-distance').textContent = '';
   updateManhuntButtons('create');
-  alert('🛑 Manhunt ended.');
+  alert('🛑 Move & Seek ended.');
 }
