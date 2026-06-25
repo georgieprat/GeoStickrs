@@ -9,7 +9,7 @@ export async function calculateScore(lat, lng, homeLat, homeLng) {
   const distKm = getDistanceKm(lat, lng, homeLat, homeLng);
   const dist_scale = Math.min(distKm / MAX_DISTANCE, 1);
   const eased = Math.sqrt(dist_scale);
-  score += eased * 100;
+  score += Math.floor(eased * 100);
 
   // Remoteness bonus: +10 pts if over 1000 km from home
   //if (distKm > 1000) score += 10;
