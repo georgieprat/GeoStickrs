@@ -38,32 +38,39 @@
 
 <!-- ── LOBBY SCREEN (shown first) ───────────────── -->
 <div id="lobby-screen">
-  <div id="lobby-card">
-    <div class="step-icon">📍</div>
-    <h1>GeoStickrs</h1>
-    
-    <!-- ── LOBBY SELECTOR ─────────────────────────── -->
-    <!--<select id="lobby-select">
-      <option value="" disabled selected>Select a lobby…</option>
-    </select> -->
-    
-    <p class="lobby-subtitle">Enter your lobby password and username</p>
-    <input type="password" id="lobby-password" placeholder="Lobby password" autocomplete="off">
-    <input type="text" id="lobby-username" placeholder="Your username" autocomplete="off" maxlength="24">
-    <p id="lobby-error" class="step-error"></p>
-    <button id="btn-lobby-join" class="btn-primary">Join lobby →</button>
-    
-    <button id="btn-lobby-create" class="btn-secondary">Create lobby →</button>
-    
-    <div id="lobby-creator">
-      <div class="horizontal-line"></div>
-      <p class="lobby-subtitle">Enter your new lobby name and password</p>
-      <input type="text" id="lobby-new-name" placeholder="Lobby name" autocomplete="off">
-      <input type="password" id="lobby-new-password" placeholder="Lobby password" autocomplete="off">
-      <p id="step-lobby-create-error" class="step-error"></p>
-      <button id="btn-lobby-home" class="btn-primary">Next: set home location →</button>
-    </div>    
-  </div>     
+  <div id="lobby-content">
+    <div id="lobby-card">
+      <div class="step-icon">📍</div>
+      <h1>GeoStickrs</h1>
+      
+      <!-- ── LOBBY SELECTOR ─────────────────────────── -->
+      <!--<select id="lobby-select">
+        <option value="" disabled selected>Select a lobby…</option>
+      </select> -->
+      
+      <p class="lobby-subtitle">Enter your lobby password and username</p>
+      <input type="password" id="lobby-password" placeholder="Lobby password" autocomplete="off">
+      <input type="text" id="lobby-username" placeholder="Your username" autocomplete="off" maxlength="24">
+      <p id="lobby-error" class="step-error"></p>
+      <button id="btn-lobby-join" class="btn-primary">Join lobby →</button>
+      
+      <button id="btn-lobby-create" class="btn-secondary">Create lobby →</button>
+      
+      <div id="lobby-creator">
+        <div class="horizontal-line"></div>
+        <p class="lobby-subtitle">Enter your new lobby name and password</p>
+        <input type="text" id="lobby-new-name" placeholder="Lobby name" autocomplete="off">
+        <input type="password" id="lobby-new-password" placeholder="Lobby password" autocomplete="off">
+        <p id="step-lobby-create-error" class="step-error"></p>
+        <button id="btn-lobby-home" class="btn-primary">Next: set home location →</button>
+      </div>      
+    </div>  
+  </div>
+  
+  <div id="lobby-screen-legal">
+    “<it><b>Please use this app responsibly. Do not capture or share illegal, harmful, or non-consensual content. Respect privacy, consent, and local laws. You are responsible for ensuring you have permission to photograph people and places.</b></it>”<br>
+    -Your GeoStickrs Team <br> 
+  </div>  
 </div>
 
   <!-- Home location picker (shown over map) -->
