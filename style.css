@@ -1324,6 +1324,11 @@ input[type="text"]:focus {
     width: 94vw !important;
     padding: 18px !important;
   }
+
+  /* Layer switcher: lift above game panels */
+  .leaflet-bottom.leaflet-left {
+    bottom: 140px !important;
+  }
 }
 
 /* ── TABLET 601–900px ────────────────────────────────── */
