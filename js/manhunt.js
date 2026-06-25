@@ -12,6 +12,7 @@ let seekerLat        = null;
 let seekerLng        = null;
 let lastLocationSent = 0;
 let expiryInterval   = null;
+let countdownInterval = null;
 const LOCATION_INTERVAL_MS = 5000;
 
 const MANHUNT_RADIUS_METERS = { small: 200, medium: 500, large: 1000 };
@@ -94,6 +95,7 @@ export async function startManhunt() {
     subscribeToManhuntUpdates();
     startSeekerTracking();
     startExpiryTimer();
+    startCountdown();
     alert('🏃 Manhunt started. Your location is now being tracked live.');
 
   }, (err) => {
@@ -133,6 +135,45 @@ function startLocationTracking(manhuntId, radiusMeters) {
     enableHighAccuracy: true,
     maximumAge:         0,
   });
+}
+
+// ── COUNTDOWN DISPLAY ────────────────────────────────
+function startCountdown() {
+  stopCountdown();
+  const el = document.getElementById('manhunt-timer');
+  if (!el) return;
+
+  function tick() {
+    if (!activeManhunt?.expires_at) {
+      el.textContent = '∞ No time limit';
+      return;
+    }
+    const remaining = new Date(activeManhunt.expires_at) - new Date();
+    if (remaining <= 0) {
+      el.textContent = '⏰ Time up!';
+      stopCountdown();
+      return;
+    }
+    const totalSec = Math.floor(remaining / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    el.textContent = h > 0
+      ? `⏱ ${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `⏱ ${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  tick();
+  countdownInterval = setInterval(tick, 1000);
+}
+
+function stopCountdown() {
+  if (countdownInterval !== null) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  const el = document.getElementById('manhunt-timer');
+  if (el) el.textContent = '';
 }
 
 // ── EXPIRY TIMER ─────────────────────────────────────
@@ -237,6 +278,7 @@ export async function loadManhuntFromSupabase() {
   subscribeToManhuntUpdates();
   startSeekerTracking();
   startExpiryTimer();
+  startCountdown();
 }
 
 function stopSeekerTracking() {
@@ -334,6 +376,7 @@ export async function endManhunt() {
   }
   stopSeekerTracking();
   stopExpiryTimer();
+  stopCountdown();
 
   activeManhunt = null;
   manhuntDraft  = null;
