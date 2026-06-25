@@ -95,6 +95,24 @@ L.control.layers(
     placePreviewMarker(lat, lng);
   });
 
+  // Home location marker
+  if (lobby?.home_lat && lobby?.home_lng) {
+    const homeIcon = L.divIcon({
+      className: '',
+      html: `<div style="
+        font-size: 22px;
+        line-height: 1;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      ">🏠</div>`,
+      iconSize:    [24, 24],
+      iconAnchor:  [12, 22],
+      popupAnchor: [0, -26],
+    });
+    L.marker([lobby.home_lat, lobby.home_lng], { icon: homeIcon, zIndexOffset: 1000 })
+      .addTo(map)
+      .bindPopup(`<strong>🏠 Home: ${lobby.name}</strong>`);
+  }
+
   loadAllStickers();
   loadLeaderboard();
   loadActiveLandmarkHunt();
