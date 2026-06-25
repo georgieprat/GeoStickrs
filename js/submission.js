@@ -346,7 +346,6 @@ export function addMarkerToMap(s) {
           font-weight:700;
           color:white;
           text-shadow:0 1px 2px rgba(0,0,0,0.6);
-          transform:rotate(45deg);
           pointer-events:none;
         ">
           ${initial}
