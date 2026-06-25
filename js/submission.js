@@ -399,6 +399,10 @@ export async function loadAllStickers() {
     .order('created_at', { ascending: false });
   if (error) { console.error(error); return; }
   data.forEach(addMarkerToMap);
+
+  if (clusterGroup.getLayers().length > 0) {
+    map.fitBounds(clusterGroup.getBounds(), { padding: [40, 40], maxZoom: 14 });
+  }
 }
 
 // ── LEADERBOARD ──────────────────────────────────────
