@@ -22,8 +22,14 @@ export function initLandmark(mapInstance) {
   });
 
   // Close button (mobile only — hidden via CSS on desktop)
-  document.getElementById('btn-landmark-panel-close')?.addEventListener('click', () => {
+  document.getElementById('btn-landmark-panel-close')?.addEventListener('click', (e) => {
+    e.stopPropagation();
     document.getElementById('landmark-panel').style.display = 'none';
+  });
+
+  // Prevent panel clicks from bubbling to the map
+  document.getElementById('landmark-panel')?.addEventListener('click', (e) => {
+    e.stopPropagation();
   });
 
   // Tap map to close panel on mobile

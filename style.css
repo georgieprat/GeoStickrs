@@ -807,9 +807,26 @@ input[type="text"]:focus {
   width: 100%;
 }
 
-/* ── ADMIN BUTTON ─────────────────────────────────── */
+/* ── SETTINGS GEAR BUTTON ────────────────────────── */
+
+#btn-settings-modal {
+  background: none;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #18181b;
+  margin-right: 6px;
+  transition: background 0.15s;
+}
+#btn-settings-modal:hover { background: #f4f4f5; }
+
+/* ── ADMIN BUTTON (legacy — kept for JS compat) ──── */
 
 #btn-admin-panel {
+  display: none !important;
   background: #facc15;
   color: #18181b;
   border: none;
@@ -1150,29 +1167,89 @@ input[type="text"]:focus {
   margin-top: 8px;
 }
 
-/* ── ADMIN LOGIN MODAL ────────────────────────────── */
+/* ── SETTINGS MODAL ──────────────────────────────── */
 
-#admin-login-modal {
+#settings-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
   z-index: 20000;
   display: none;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 
-.admin-login-content {
-  width: 360px;
-  max-width: 90vw;
-  background: white;
-  border-radius: 18px;
-  padding: 24px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+#settings-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
 }
 
-.admin-login-content h3 {
-  margin-bottom: 14px;
+#settings-card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88vh;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #18181b;
+  border-bottom: 1px solid #e4e4e7;
+  flex-shrink: 0;
+}
+
+#btn-settings-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: #71717a;
+  cursor: pointer;
+  padding: 0 4px;
+}
+#btn-settings-close:hover { color: #18181b; }
+
+#settings-card > .settings-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  overflow-y: auto;
+}
+
+#settings-card > .settings-section:last-child {
+  border-bottom: none;
+  flex-shrink: 0;
+}
+
+#settings-rules-content {
+  max-height: 45vh;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #3f3f46;
+}
+
+#settings-rules-content p {
+  margin-bottom: 10px;
+}
+
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 12px;
 }
 
 #admin-token-input {
@@ -1186,7 +1263,7 @@ input[type="text"]:focus {
   outline: none;
   background: #fafafa;
   transition: border-color 0.15s;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 #admin-token-input:focus {
@@ -1195,9 +1272,9 @@ input[type="text"]:focus {
 }
 
 #btn-admin-login,
-#btn-admin-login-close {
+#btn-settings-open-admin {
   width: 100%;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 
@@ -1442,14 +1519,14 @@ input[type="text"]:focus {
     right: 10px;
     background: none;
     border: none;
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1;
     color: #71717a;
     cursor: pointer;
-    padding: 2px 4px;
+    padding: 2px 6px;
+    z-index: 10;
   }
   .game-panel-close-btn:hover { color: #18181b; }
-  #landmark-panel { position: relative !important; }
 }
 
 /* ── PHOTO LIGHTBOX ──────────────────────────────────── */

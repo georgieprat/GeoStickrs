@@ -95,25 +95,37 @@ function initRulesOverlay() {
   return overlay;
 }
 
+// ── SETTINGS MODAL ───────────────────────────────────
+function openSettingsModal() {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  const localToken = localStorage.getItem(`geostickrs_admin_${lobby?.name}`);
+  const isAdmin = localToken && lobby?.admin_token && localToken === lobby.admin_token;
+
+  document.getElementById('settings-admin-login-area').style.display = isAdmin ? 'none'  : 'block';
+  document.getElementById('settings-admin-open-area').style.display  = isAdmin ? 'block' : 'none';
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+
+function closeSettingsModal() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+
+function initSettingsModal() {
+  document.getElementById('btn-settings-modal')?.addEventListener('click', openSettingsModal);
+  document.getElementById('btn-settings-close')?.addEventListener('click', closeSettingsModal);
+  document.getElementById('settings-backdrop')?.addEventListener('click', closeSettingsModal);
+
+  document.getElementById('btn-settings-open-admin')?.addEventListener('click', () => {
+    closeSettingsModal();
+    document.getElementById('admin-panel').style.display = 'flex';
+  });
+}
+
 // ── ADMIN PANEL ──────────────────────────────────────
 function initAdminPanel() {
-  const adminButton = document.getElementById('btn-admin-panel');
   const adminPanel  = document.getElementById('admin-panel');
   const closeButton = document.getElementById('btn-admin-close');
-  if (!adminButton || !adminPanel || !closeButton) return;
-
-  const rulesOverlay = initRulesOverlay();
-
-  adminButton.addEventListener('click', () => {
-    const lobby      = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-    const localToken = localStorage.getItem(`geostickrs_admin_${lobby.name}`);
-
-    if (localToken && lobby.admin_token && localToken === lobby.admin_token) {
-      adminPanel.style.display = 'flex';
-      return;
-    }
-    document.getElementById('admin-login-modal').style.display = 'flex';
-  });
+  if (!adminPanel || !closeButton) return;
 
   closeButton.addEventListener('click', () => { adminPanel.style.display = 'none'; });
 
@@ -185,24 +197,21 @@ function initAdminPanel() {
     alert('Capture The Sticker coming soon.');
   });
   document.getElementById('btn-admin-rules')?.addEventListener('click', () => {
-    rulesOverlay?.open();
+    adminPanel.style.display = 'none';
+    openSettingsModal();
   });
 }
 
-// ── ADMIN LOGIN MODAL ────────────────────────────────
+// ── ADMIN LOGIN (inside settings modal) ──────────────
 function initAdminLoginModal() {
-  const modal       = document.getElementById('admin-login-modal');
   const input       = document.getElementById('admin-token-input');
   const loginButton = document.getElementById('btn-admin-login');
-  const closeButton = document.getElementById('btn-admin-login-close');
   const adminPanel  = document.getElementById('admin-panel');
-  if (!modal || !input || !loginButton || !closeButton || !adminPanel) return;
-
-  closeButton.addEventListener('click', () => { modal.style.display = 'none'; input.value = ''; });
+  if (!input || !loginButton || !adminPanel) return;
 
   loginButton.addEventListener('click', () => {
-    const lobby    = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-    const entered  = input.value.trim();
+    const lobby   = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+    const entered = input.value.trim();
 
     if (!entered) { alert('Please enter an admin password.'); return; }
 
@@ -212,13 +221,17 @@ function initAdminLoginModal() {
       entered === GLOBAL_ADMIN_PASSWORD
     ) {
       localStorage.setItem(`geostickrs_admin_${lobby.name}`, lobby.admin_token);
-      modal.style.display      = 'none';
-      input.value              = '';
+      input.value = '';
+      closeSettingsModal();
       adminPanel.style.display = 'flex';
       return;
     }
 
     alert('Wrong admin password.');
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loginButton.click();
   });
 }
 
@@ -281,6 +294,7 @@ document.addEventListener('click', async (e) => {
 
 // ── BOOT ─────────────────────────────────────────────
 window.addEventListener('load', () => {
+  initSettingsModal();
   initAdminPanel();
   initAdminLoginModal();
 });

@@ -110,7 +110,7 @@
     <!-- LOBBY BADGE (top right) -->
     <div id="lobby-badge">
       <span id="lobby-badge-name"></span>
-      <button id="btn-admin-panel" style="display:none;">Admin</button>
+      <button id="btn-settings-modal" title="Settings">⚙️</button>
       <button id="btn-leave-lobby">Leave</button>
     </div>
 
@@ -501,26 +501,42 @@
   </div>
 </div>
 
-<!-- ADMIN LOGIN MODAL -->
-<div id="admin-login-modal" style="display:none;">
-  <div class="admin-login-content">
+<!-- SETTINGS MODAL -->
+<div id="settings-modal" style="display:none;">
+  <div id="settings-backdrop"></div>
+  <div id="settings-card">
+    <div id="settings-header">
+      <span>⚙️ Settings</span>
+      <button id="btn-settings-close" aria-label="Close">×</button>
+    </div>
 
-    <h3>🔒 Admin Login</h3>
+    <div class="settings-section">
+      <h4 class="settings-section-title">📋 Rules &amp; Legal</h4>
+      <div id="settings-rules-content">
+        <p><em>Please use this app responsibly. Do not capture or share illegal, harmful, or non-consensual content. Respect privacy, consent, and local laws. You are responsible for ensuring you have permission to photograph people and places.</em><br>— Your GeoStickrs Team</p>
+        <p><b>1. Lawful Use</b><br>Use the app in compliance with all applicable laws. Do not use it for unlawful surveillance, harassment, or stalking. You are responsible for having the legal right to capture images of people and places.</p>
+        <p><b>2. Consent &amp; Privacy (GDPR)</b><br>Obtain consent before capturing identifiable individuals where required. Do not capture images in private spaces without permission. Avoid uploading images containing sensitive personal data without consent.</p>
+        <p><b>3. Prohibited Content</b><br>The app must not be used to capture or distribute CSAM, non-consensual intimate imagery, content facilitating violence, or content used to harass or dox individuals.</p>
+        <p><b>4. Harassment &amp; Safety</b><br>Do not use the app to threaten or intimidate others. Do not use it while driving or in ways that endanger yourself or others.</p>
+        <p><b>5. Sensitive Locations</b><br>Respect restrictions in healthcare facilities, religious sites, schools, and private property where photography is prohibited.</p>
+      </div>
+    </div>
 
-    <input
-      id="admin-token-input"
-      type="password"
-      placeholder="Enter admin code"
-      autocomplete="off"
-    >
-
-    <button id="btn-admin-login" class="btn-primary">
-      Login
-    </button>
-
-    <button id="btn-admin-login-close" class="btn-secondary">
-      Cancel
-    </button>
+    <div class="settings-section">
+      <h4 class="settings-section-title">🔒 Admin</h4>
+      <div id="settings-admin-login-area">
+        <input
+          id="admin-token-input"
+          type="password"
+          placeholder="Enter admin password"
+          autocomplete="off"
+        >
+        <button id="btn-admin-login" class="btn-primary">Login</button>
+      </div>
+      <div id="settings-admin-open-area" style="display:none;">
+        <button id="btn-settings-open-admin" class="btn-primary">Open Admin Panel →</button>
+      </div>
+    </div>
 
   </div>
 </div>
