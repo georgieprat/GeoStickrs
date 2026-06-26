@@ -426,8 +426,8 @@ if (mode === 'manhunt') {
   query = query.eq('mode', 'manhunt');
 }
 
-if (mode === 'treasure') {
-  query = query.eq('mode', 'treasure');
+if (mode === 'landmark') {
+  query = query.eq('mode', 'landmark');
 }
 
 const { data, error } = await query.order('score', { ascending: false });
@@ -439,7 +439,7 @@ const { data, error } = await query.order('score', { ascending: false });
 
  if (mode === 'classic' ||
     mode === 'manhunt' ||
-    mode === 'treasure') {
+    mode === 'landmark') {
 
   const totals = {};
 

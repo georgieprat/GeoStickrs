@@ -21,6 +21,18 @@ export function initLandmark(mapInstance) {
     panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
   });
 
+  // Close button (mobile only — hidden via CSS on desktop)
+  document.getElementById('btn-landmark-panel-close')?.addEventListener('click', () => {
+    document.getElementById('landmark-panel').style.display = 'none';
+  });
+
+  // Tap map to close panel on mobile
+  map.on('click', () => {
+    if (window.innerWidth <= 600) {
+      document.getElementById('landmark-panel').style.display = 'none';
+    }
+  });
+
   // Admin hint photo
   document.getElementById('btn-lsh-hint-photo')?.addEventListener('click', () => {
     document.getElementById('lsh-hint-photo-input').click();
@@ -126,7 +138,7 @@ export async function postLandmarkSticker() {
     activeLandmarkHunt = data;
     showAdminActivePhase();
     showPlayerPanel(data);
-    alert('✅ Landmark Sticker Hunt posted! Players can now search.');
+    alert('✅ Sticker Hunt posted! Players can now search.');
   }, err => {
     btn.disabled    = false;
     btn.textContent = '📍 Post Hidden Sticker';
@@ -137,7 +149,7 @@ export async function postLandmarkSticker() {
 // ── ADMIN: End Hunt ───────────────────────────────────
 export async function endLandmarkHunt() {
   if (!activeLandmarkHunt) return;
-  if (!confirm('End the Landmark Sticker Hunt?')) return;
+  if (!confirm('End the Sticker Hunt?')) return;
 
   const { error } = await supabase
     .from('landmark_hunts')
@@ -155,7 +167,7 @@ export async function endLandmarkHunt() {
     const el = document.getElementById(`lsh-hint-${i}`);
     if (el) el.value = '';
   });
-  alert('Landmark Sticker Hunt ended.');
+  alert('Sticker Hunt ended.');
 }
 
 // ── ADMIN: Load Submissions for Review ───────────────
@@ -213,26 +225,21 @@ export async function approveLandmarkSubmission(id) {
 
   if (sub) {
     const { data: hunt } = await supabase
-      .from('landmark_hunts').select('lat, lng, id').eq('id', sub.hunt_id).single();
-
-    const { score, distMeters } = hunt
-      ? calcLandmarkScore(sub.lat, sub.lng, hunt.lat, hunt.lng)
-      : { score: 100, distMeters: null };
+      .from('landmark_hunts').select('id').eq('id', sub.hunt_id).single();
 
     const { data: newSticker } = await supabase.from('stickers').insert([{
       username:  sub.username,
       lat:       sub.lat,
       lng:       sub.lng,
       photo_url: sub.photo_url,
-      score,
+      score:     100,
       lobby:     sub.lobby,
       mode:      'landmark',
     }]).select().single();
 
     if (newSticker) addMarkerToMap(newSticker);
 
-    const distInfo = distMeters !== null ? ` (${distMeters} m from sticker)` : '';
-    alert(`✅ Submission approved! Score: ${score} pts${distInfo}\n\nHunt ended — first find wins!`);
+    alert(`✅ Submission approved! ${sub.username} gets 100 pts.\n\nHunt ended — first find wins!`);
 
     // End the hunt after first approval
     if (hunt) {
@@ -271,9 +278,9 @@ export function subscribeToSubmissionUpdates() {
       if (row.username !== username || row.lobby !== lobby.name) return;
 
       if (row.status === 'approved') {
-        showToast('✅ Your Landmark find was approved! Sticker posted.');
+        showToast('✅ Your Sticker Hunt find was approved!');
       } else if (row.status === 'rejected') {
-        showToast('❌ Your Landmark find was rejected.');
+        showToast('❌ Your Sticker Hunt find was rejected.');
       }
     })
     .subscribe();
@@ -389,7 +396,7 @@ const LANDMARK_SUBMIT_RADIUS_M = 100;
 
 function openFoundModal() {
   if (!activeLandmarkHunt) {
-    alert('No active Landmark Sticker Hunt found.');
+    alert('No active Sticker Hunt found.');
     return;
   }
   if (!navigator.geolocation) {

@@ -1429,7 +1429,28 @@ input[type="text"]:focus {
   }
 }
 
-/* #landmark-panel shares .game-panel-* styles above */
+/* Close button on landmark panel — mobile only */
+.game-panel-close-btn {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .game-panel-close-btn {
+    display: block;
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    color: #71717a;
+    cursor: pointer;
+    padding: 2px 4px;
+  }
+  .game-panel-close-btn:hover { color: #18181b; }
+  #landmark-panel { position: relative !important; }
+}
 
 /* ── PHOTO LIGHTBOX ──────────────────────────────────── */
 #photo-lightbox {
