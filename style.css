@@ -1176,7 +1176,22 @@ input[type="text"]:focus {
 }
 
 #admin-token-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border: 1.5px solid #d4d4d8;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  background: #fafafa;
+  transition: border-color 0.15s;
   margin-bottom: 14px;
+}
+
+#admin-token-input:focus {
+  border-color: #18181b;
+  background: #fff;
 }
 
 #btn-admin-login,
