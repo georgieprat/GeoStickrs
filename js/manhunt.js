@@ -334,15 +334,44 @@ function subscribeToManhuntUpdates() {
       filter: `id=eq.${activeManhunt.id}`,
     }, payload => {
       const updated = payload.new;
+
+      // Hunt ended — clean up for all players
       if (!updated.active) {
         if (manhuntBoxLayer && map.hasLayer(manhuntBoxLayer)) map.removeLayer(manhuntBoxLayer);
         hideManhuntUI();
         document.getElementById('manhunt-distance').textContent = '';
         stopSeekerTracking();
+        stopExpiryTimer();
+        stopCountdown();
         activeManhunt = null;
         updateManhuntButtons('create');
         return;
       }
+
+      // Catch request pending — show hider confirmation modal
+      if (updated.catch_status === 'pending') {
+        activeManhunt = { ...activeManhunt, ...updated };
+        const isHider = String(sessionStorage.getItem('geostickrs_hider_manhunt_id')) === String(activeManhunt.id);
+        if (isHider) openHiderConfirmModal();
+        return;
+      }
+
+      // Hider denied the catch — notify seeker
+      if (updated.catch_status === 'denied') {
+        const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+        if (updated.catch_requested_by === lobby?.username) {
+          import('./submission.js').then(m => m.showToast('❌ Hider denied the catch. Try again!'));
+          const statusEl = document.getElementById('manhunt-caught-status');
+          if (statusEl) statusEl.textContent = '❌ Hider denied. You may try again.';
+          const btn = document.getElementById('btn-manhunt-caught-submit');
+          if (btn) { btn.disabled = false; btn.textContent = 'Submit 🚀'; }
+          // Reset so a new attempt is possible
+          supabase.from('manhunts').update({ catch_status: null, catch_requested_by: null }).eq('id', updated.id).then(() => {});
+        }
+        activeManhunt = { ...activeManhunt, ...updated };
+        return;
+      }
+
       activeManhunt = { ...activeManhunt, ...updated };
       showManhuntOnMap(updated, false);
       updateDistanceDisplay();
@@ -513,12 +542,12 @@ document.getElementById('btn-manhunt-caught-submit')
     if (!caughtPos || !caughtPhotoFile) return;
     const btn = document.getElementById('btn-manhunt-caught-submit');
     btn.disabled = true;
-    btn.textContent = '⏳ Submitting…';
+    btn.textContent = '⏳ Uploading…';
     document.getElementById('manhunt-caught-status').textContent = 'Uploading photo…';
 
     try {
       const lobby      = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-      const winnerName = lobby?.username || 'Hunter';
+      const seekerName = lobby?.username || 'Hunter';
       const lobbyFolder = lobby.name.replace(/\s+/g, '_').toLowerCase();
       const fileName    = `${lobbyFolder}/manhunt_${Date.now()}_${caughtPhotoFile.name.replace(/\s/g,'_')}`;
 
@@ -529,9 +558,19 @@ document.getElementById('btn-manhunt-caught-submit')
 
       const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
 
-      await saveManhuntScore(caughtPos.coords.latitude, caughtPos.coords.longitude, winnerName, urlData.publicUrl);
-      closeCaughtModal();
-      endManhunt();
+      // Request hider confirmation instead of saving immediately
+      const { error: updateError } = await supabase.from('manhunts').update({
+        catch_requested_by: seekerName,
+        catch_seeker_lat:   caughtPos.coords.latitude,
+        catch_seeker_lng:   caughtPos.coords.longitude,
+        catch_photo_url:    urlData.publicUrl,
+        catch_status:       'pending',
+      }).eq('id', activeManhunt.id);
+
+      if (updateError) throw updateError;
+
+      btn.textContent = '⏳ Waiting…';
+      document.getElementById('manhunt-caught-status').textContent = '⏳ Waiting for hider to confirm…';
     } catch (err) {
       console.error(err);
       document.getElementById('manhunt-caught-status').textContent = `Error: ${err.message}`;
@@ -539,6 +578,49 @@ document.getElementById('btn-manhunt-caught-submit')
       btn.textContent = 'Submit 🚀';
     }
   });
+
+// ── HIDER CONFIRM MODAL ───────────────────────────────
+function openHiderConfirmModal() {
+  if (!activeManhunt) return;
+  const label = document.getElementById('manhunt-caught-by-label');
+  if (label) label.textContent = `${activeManhunt.catch_requested_by} says they found you!`;
+
+  const proofWrap = document.getElementById('manhunt-caught-proof-wrap');
+  const proofImg  = document.getElementById('manhunt-caught-proof-img');
+  if (proofWrap && proofImg && activeManhunt.catch_photo_url) {
+    proofImg.src = activeManhunt.catch_photo_url;
+    proofWrap.style.display = 'block';
+  } else if (proofWrap) {
+    proofWrap.style.display = 'none';
+  }
+
+  document.getElementById('manhunt-hider-confirm-modal').style.display = 'flex';
+}
+
+document.getElementById('btn-hider-confirm-caught')?.addEventListener('click', async () => {
+  if (!activeManhunt) return;
+  const btn = document.getElementById('btn-hider-confirm-caught');
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
+  // Save score with seeker's data
+  await saveManhuntScore(
+    activeManhunt.catch_seeker_lat,
+    activeManhunt.catch_seeker_lng,
+    activeManhunt.catch_requested_by,
+    activeManhunt.catch_photo_url,
+  );
+
+  document.getElementById('manhunt-hider-confirm-modal').style.display = 'none';
+  // End hunt (updates active=false → all players see it via subscription)
+  await endManhunt();
+});
+
+document.getElementById('btn-hider-deny-caught')?.addEventListener('click', async () => {
+  if (!activeManhunt) return;
+  await supabase.from('manhunts').update({ catch_status: 'denied' }).eq('id', activeManhunt.id);
+  document.getElementById('manhunt-hider-confirm-modal').style.display = 'none';
+});
 
 // ── SAVE SCORE ───────────────────────────────────────
 async function saveManhuntScore(lat, lng, username, photoUrl = null) {

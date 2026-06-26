@@ -246,6 +246,13 @@
             <label for="lsh-hint-3">Hint 3 (optional)</label>
             <input type="text" id="lsh-hint-3" class="admin-input" placeholder="Additional hint…" autocomplete="off">
 
+            <label>Photo hint (optional)</label>
+            <input type="file" id="lsh-hint-photo-input" accept="image/*" style="display:none;">
+            <button type="button" id="btn-lsh-hint-photo" class="admin-action" style="margin-bottom:6px;">📷 Add photo hint</button>
+            <div id="lsh-hint-photo-preview-wrap" style="display:none;margin-bottom:8px;">
+              <img id="lsh-hint-photo-preview" style="max-width:100%;max-height:120px;border-radius:8px;" alt="Preview">
+            </div>
+
             <button class="admin-action" id="btn-lsh-post">
               📍 Post Hidden Sticker
             </button>
@@ -398,6 +405,11 @@
 </div>
 
 
+<!-- LANDMARK MOBILE FAB (shown when landmark hunt active) -->
+<button id="landmark-mobile-fab" style="display:none;">
+  🏛️ <span>Found it?</span>
+</button>
+
 <!-- LANDMARK STICKER HUNT PLAYER PANEL -->
 <div id="landmark-panel" style="display:none;">
   <div class="game-panel-header">
@@ -411,13 +423,16 @@
     <p id="landmark-current-hint">Loading hint…</p>
     <p id="landmark-hint-2" style="display:none;margin-top:6px;"></p>
     <p id="landmark-hint-3" style="display:none;margin-top:6px;"></p>
+    <div id="landmark-hint-photo-wrap" style="display:none;margin-top:10px;">
+      <img id="landmark-hint-photo" style="max-width:100%;border-radius:8px;cursor:pointer;" alt="Hint photo">
+    </div>
   </div>
   <button id="btn-lsh-found" class="btn-primary game-panel-btn">
     🔍 I think I found it!
   </button>
 </div>
 
-<!-- MANHUNT CAUGHT MODAL (photo proof) -->
+<!-- MANHUNT CAUGHT MODAL (photo proof — seeker) -->
 <div id="manhunt-caught-modal" style="display:none;">
   <div class="step-card">
     <div class="step-header">
@@ -438,6 +453,24 @@
     <div class="step-actions">
       <button id="btn-manhunt-caught-cancel" class="btn-secondary">Cancel</button>
       <button id="btn-manhunt-caught-submit" class="btn-primary" disabled>Submit 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- HIDER CATCH CONFIRM MODAL -->
+<div id="manhunt-hider-confirm-modal" style="display:none;">
+  <div class="step-card">
+    <div class="step-header">
+      <span class="step-icon">🚨</span>
+      <h2>You've been caught!</h2>
+      <p id="manhunt-caught-by-label">A seeker says they found you</p>
+    </div>
+    <div id="manhunt-caught-proof-wrap" style="display:none;">
+      <img id="manhunt-caught-proof-img" alt="Proof photo" style="width:100%;max-width:220px;border-radius:8px;margin:8px 0;">
+    </div>
+    <div class="step-actions">
+      <button id="btn-hider-deny-caught" class="btn-secondary">❌ Deny</button>
+      <button id="btn-hider-confirm-caught" class="btn-primary">✅ Confirm</button>
     </div>
   </div>
 </div>

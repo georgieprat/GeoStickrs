@@ -6,6 +6,7 @@ let map                = null;
 let activeLandmarkHunt = null;
 let foundPhotoFile     = null;
 let foundPhotoDataUrl  = null;
+let hintPhotoFile      = null;
 
 // ── INIT ──────────────────────────────────────────────
 export function initLandmark(mapInstance) {
@@ -13,6 +14,33 @@ export function initLandmark(mapInstance) {
 
   document.getElementById('btn-lsh-found')?.addEventListener('click', openFoundModal);
   document.getElementById('btn-lsh-found-cancel')?.addEventListener('click', closeFoundModal);
+
+  // FAB toggle
+  document.getElementById('landmark-mobile-fab')?.addEventListener('click', () => {
+    const panel = document.getElementById('landmark-panel');
+    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Admin hint photo
+  document.getElementById('btn-lsh-hint-photo')?.addEventListener('click', () => {
+    document.getElementById('lsh-hint-photo-input').click();
+  });
+  document.getElementById('lsh-hint-photo-input')?.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    hintPhotoFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('lsh-hint-photo-preview').src = ev.target.result;
+      document.getElementById('lsh-hint-photo-preview-wrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Hint photo lightbox
+  document.getElementById('landmark-hint-photo')?.addEventListener('click', function() {
+    if (this.src) window._openPhotoLightbox?.(this.src);
+  });
 
   document.getElementById('btn-lsh-camera')?.addEventListener('click', () => {
     document.getElementById('lsh-camera-input').click();
@@ -63,18 +91,37 @@ export async function postLandmarkSticker() {
 
   navigator.geolocation.getCurrentPosition(async pos => {
     const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+
+    // Upload hint photo if provided
+    let hintPhotoUrl = null;
+    if (hintPhotoFile) {
+      const lobbyFolder = lobby.name.replace(/\s+/g, '_').toLowerCase();
+      const fileName = `${lobbyFolder}/lsh_hint_${Date.now()}_${hintPhotoFile.name.replace(/\s/g, '_')}`;
+      const { error: upErr } = await supabase.storage
+        .from('photos').upload(fileName, hintPhotoFile, { cacheControl: '3600', upsert: false });
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
+        hintPhotoUrl = urlData.publicUrl;
+      }
+    }
+
     const { data, error } = await supabase.from('landmark_hunts').insert([{
-      lobby:  lobby.name,
-      active: true,
-      lat:    pos.coords.latitude,
-      lng:    pos.coords.longitude,
+      lobby:          lobby.name,
+      active:         true,
+      lat:            pos.coords.latitude,
+      lng:            pos.coords.longitude,
       hints,
+      hint_photo_url: hintPhotoUrl,
     }]).select().single();
 
     btn.disabled    = false;
     btn.textContent = '📍 Post Hidden Sticker';
 
     if (error) { alert('Error: ' + error.message); return; }
+
+    hintPhotoFile = null;
+    document.getElementById('lsh-hint-photo-preview-wrap').style.display = 'none';
+    document.getElementById('lsh-hint-photo-input').value = '';
 
     activeLandmarkHunt = data;
     showAdminActivePhase();
@@ -100,9 +147,10 @@ export async function endLandmarkHunt() {
   if (error) { alert('Error: ' + error.message); return; }
 
   activeLandmarkHunt = null;
-  document.getElementById('landmark-panel').style.display = 'none';
-  document.getElementById('lsh-create-form').style.display  = 'block';
-  document.getElementById('lsh-active-form').style.display  = 'none';
+  document.getElementById('landmark-panel').style.display        = 'none';
+  document.getElementById('landmark-mobile-fab').style.display   = 'none';
+  document.getElementById('lsh-create-form').style.display       = 'block';
+  document.getElementById('lsh-active-form').style.display       = 'none';
   [1, 2, 3].forEach(i => {
     const el = document.getElementById(`lsh-hint-${i}`);
     if (el) el.value = '';
@@ -165,7 +213,7 @@ export async function approveLandmarkSubmission(id) {
 
   if (sub) {
     const { data: hunt } = await supabase
-      .from('landmark_hunts').select('lat, lng').eq('id', sub.hunt_id).single();
+      .from('landmark_hunts').select('lat, lng, id').eq('id', sub.hunt_id).single();
 
     const { score, distMeters } = hunt
       ? calcLandmarkScore(sub.lat, sub.lng, hunt.lat, hunt.lng)
@@ -184,7 +232,13 @@ export async function approveLandmarkSubmission(id) {
     if (newSticker) addMarkerToMap(newSticker);
 
     const distInfo = distMeters !== null ? ` (${distMeters} m from sticker)` : '';
-    alert(`✅ Submission approved! Score: ${score} pts${distInfo}`);
+    alert(`✅ Submission approved! Score: ${score} pts${distInfo}\n\nHunt ended — first find wins!`);
+
+    // End the hunt after first approval
+    if (hunt) {
+      await supabase.from('landmark_hunts').update({ active: false }).eq('id', hunt.id);
+      activeLandmarkHunt = null;
+    }
   } else {
     alert('✅ Submission approved!');
   }
@@ -240,19 +294,59 @@ export async function loadActiveLandmarkHunt() {
     .maybeSingle();
 
   if (error) { console.error(error); return; }
-  if (!data) return;
 
-  activeLandmarkHunt = data;
-  showPlayerPanel(data);
-  showAdminActivePhase();
-  subscribeToSubmissionUpdates();
+  if (data) {
+    activeLandmarkHunt = data;
+    showPlayerPanel(data);
+    showAdminActivePhase();
+    subscribeToSubmissionUpdates();
+  }
+
+  subscribeLobbyLandmark();
+}
+
+// ── LOBBY-LEVEL SUBSCRIPTION (realtime start/stop for all) ──
+function subscribeLobbyLandmark() {
+  const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (!lobby) return;
+
+  supabase
+    .channel('landmark-lobby-' + lobby.name)
+    .on('postgres_changes', {
+      event:  'INSERT',
+      schema: 'public',
+      table:  'landmark_hunts',
+      filter: `lobby=eq.${lobby.name}`,
+    }, payload => {
+      activeLandmarkHunt = payload.new;
+      showPlayerPanel(payload.new);
+      showAdminActivePhase();
+      subscribeToSubmissionUpdates();
+    })
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'landmark_hunts',
+      filter: `lobby=eq.${lobby.name}`,
+    }, payload => {
+      if (!payload.new.active) {
+        activeLandmarkHunt = null;
+        document.getElementById('landmark-panel').style.display = 'none';
+        document.getElementById('landmark-mobile-fab').style.display = 'none';
+        document.getElementById('lsh-create-form').style.display = 'block';
+        document.getElementById('lsh-active-form').style.display = 'none';
+      }
+    })
+    .subscribe();
 }
 
 // ── UI HELPERS ────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 600; }
+
 function showPlayerPanel(hunt) {
   const panel = document.getElementById('landmark-panel');
+  const fab   = document.getElementById('landmark-mobile-fab');
   if (!panel || !hunt) return;
-  panel.style.display = 'block';
 
   const hints = Array.isArray(hunt.hints) ? hunt.hints : [];
   document.getElementById('landmark-current-hint').textContent = hints[0] || 'Find the hidden sticker!';
@@ -261,6 +355,26 @@ function showPlayerPanel(hunt) {
   const h3 = document.getElementById('landmark-hint-3');
   if (h2) { h2.textContent = hints[1] || ''; h2.style.display = hints[1] ? 'block' : 'none'; }
   if (h3) { h3.textContent = hints[2] || ''; h3.style.display = hints[2] ? 'block' : 'none'; }
+
+  // Hint photo
+  const photoWrap = document.getElementById('landmark-hint-photo-wrap');
+  const photoImg  = document.getElementById('landmark-hint-photo');
+  if (photoWrap && photoImg) {
+    if (hunt.hint_photo_url) {
+      photoImg.src = hunt.hint_photo_url;
+      photoWrap.style.display = 'block';
+    } else {
+      photoWrap.style.display = 'none';
+    }
+  }
+
+  if (isMobile()) {
+    fab.style.display   = 'flex';
+    panel.style.display = 'none';
+  } else {
+    fab.style.display   = 'none';
+    panel.style.display = 'block';
+  }
 }
 
 function showAdminActivePhase() {
@@ -271,18 +385,47 @@ function showAdminActivePhase() {
 }
 
 // ── FOUND MODAL ───────────────────────────────────────
+const LANDMARK_SUBMIT_RADIUS_M = 100;
+
 function openFoundModal() {
   if (!activeLandmarkHunt) {
     alert('No active Landmark Sticker Hunt found.');
     return;
   }
-  foundPhotoFile    = null;
-  foundPhotoDataUrl = null;
-  document.getElementById('lsh-photo-preview-wrap').style.display = 'none';
-  document.getElementById('btn-lsh-submit').disabled               = true;
-  document.getElementById('lsh-submit-status').textContent         = '';
-  document.getElementById('lsh-found-modal').style.display         = 'flex';
-  document.getElementById('map-overlay').classList.add('active');
+  if (!navigator.geolocation) {
+    alert('GPS not available on this device.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-lsh-found');
+  if (btn) { btn.disabled = true; btn.textContent = '📡 Checking GPS…'; }
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 I think I found it!'; }
+
+    const R = 6371000;
+    const dLat = (activeLandmarkHunt.lat - pos.coords.latitude) * Math.PI / 180;
+    const dLng = (activeLandmarkHunt.lng - pos.coords.longitude) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 +
+      Math.cos(pos.coords.latitude * Math.PI/180) * Math.cos(activeLandmarkHunt.lat * Math.PI/180) * Math.sin(dLng/2)**2;
+    const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    if (dist > LANDMARK_SUBMIT_RADIUS_M) {
+      alert(`❌ You are ${Math.round(dist)} m away. Get within ${LANDMARK_SUBMIT_RADIUS_M} m of the sticker to submit.`);
+      return;
+    }
+
+    foundPhotoFile    = null;
+    foundPhotoDataUrl = null;
+    document.getElementById('lsh-photo-preview-wrap').style.display = 'none';
+    document.getElementById('btn-lsh-submit').disabled               = true;
+    document.getElementById('lsh-submit-status').textContent         = '';
+    document.getElementById('lsh-found-modal').style.display         = 'flex';
+    document.getElementById('map-overlay').classList.add('active');
+  }, err => {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 I think I found it!'; }
+    alert('GPS error: ' + err.message);
+  }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
 function closeFoundModal() {
