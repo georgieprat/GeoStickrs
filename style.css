@@ -1223,7 +1223,16 @@ input[type="text"]:focus {
 #settings-card > .settings-section {
   padding: 16px 20px;
   border-bottom: 1px solid #f0f0f0;
-  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* Rules section is the only one allowed to shrink/scroll */
+#settings-card > .settings-section:first-of-type {
+  flex-shrink: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 #settings-card > .settings-section:last-child {
@@ -1232,7 +1241,7 @@ input[type="text"]:focus {
 }
 
 #settings-rules-content {
-  max-height: 45vh;
+  max-height: 140px;
   overflow-y: auto;
   font-size: 13px;
   line-height: 1.6;
