@@ -62,7 +62,8 @@
         <div class="horizontal-line"></div>
         <p class="lobby-subtitle">Enter your new lobby name and password</p>
         <input type="text" id="lobby-new-name" placeholder="Lobby name" autocomplete="off">
-        <input type="password" id="lobby-new-password" placeholder="Lobby password" autocomplete="off">
+        <input type="password" id="lobby-new-password" placeholder="Lobby password (for players)" autocomplete="off">
+        <input type="password" id="lobby-new-admin-password" placeholder="Admin password (only for you)" autocomplete="off">
         <p id="step-lobby-create-error" class="step-error"></p>
         <button id="btn-lobby-home" class="btn-primary">Next: set home location →</button>
       </div>      
@@ -474,7 +475,7 @@
 
     <input
       id="admin-token-input"
-      type="text"
+      type="password"
       placeholder="Enter admin code"
       autocomplete="off"
     >
@@ -519,7 +520,7 @@
 
     <input
       id="admin-token-input"
-      type="text"
+      type="password"
       placeholder="Enter admin code"
       autocomplete="off"
     >

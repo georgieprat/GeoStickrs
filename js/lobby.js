@@ -49,22 +49,24 @@ export async function joinLobby() {
 
   const { data, error } = await supabase
     .from('lobbies')
-    .select('id, name, password, home_lat, home_lng, admin_token')
+    .select('*')
     .eq('password', password)
     .maybeSingle();
 
   btn.disabled = false;
   btn.textContent = 'Join lobby →';
 
-  if (error || !data) { showLobbyError('Wrong password. Try again.'); return; }
+  if (!data) { showLobbyError('Wrong password. Try again.'); return; }
+  if (error) { showLobbyError('Error joining lobby: ' + error.message); return; }
 
   currentLobby = {
-    id:          data.id,
-    name:        data.name,
-    password:    data.password,
-    home_lat:    data.home_lat,
-    home_lng:    data.home_lng,
-    admin_token: data.admin_token,
+    id:             data.id,
+    name:           data.name,
+    password:       data.password,
+    home_lat:       data.home_lat,
+    home_lng:       data.home_lng,
+    admin_token:    data.admin_token,
+    admin_password: data.admin_password,
     username,
   };
 
@@ -93,8 +95,10 @@ document.getElementById('btn-lobby-home').addEventListener('click', () => {
   const password = document.getElementById('lobby-new-password').value.trim();
   const errorEl  = document.getElementById('step-lobby-create-error');
 
-  if (!name)     { errorEl.textContent = 'Please enter a lobby name.';     errorEl.style.display = 'block'; return; }
-  if (!password) { errorEl.textContent = 'Please enter a lobby password.'; errorEl.style.display = 'block'; return; }
+  const adminPassword = document.getElementById('lobby-new-admin-password').value.trim();
+  if (!name)          { errorEl.textContent = 'Please enter a lobby name.';         errorEl.style.display = 'block'; return; }
+  if (!password)      { errorEl.textContent = 'Please enter a lobby password.';     errorEl.style.display = 'block'; return; }
+  if (!adminPassword) { errorEl.textContent = 'Please enter an admin password.';    errorEl.style.display = 'block'; return; }
   errorEl.style.display = 'none';
 
   // Show home picker
@@ -137,9 +141,10 @@ document.getElementById('btn-home-back').addEventListener('click', () => {
 });
 
 document.getElementById('btn-home-confirm').addEventListener('click', async () => {
-  const name     = document.getElementById('lobby-new-name').value.trim();
-  const password = document.getElementById('lobby-new-password').value.trim();
-  const btn      = document.getElementById('btn-home-confirm');
+  const name          = document.getElementById('lobby-new-name').value.trim();
+  const password      = document.getElementById('lobby-new-password').value.trim();
+  const adminPassword = document.getElementById('lobby-new-admin-password').value.trim();
+  const btn           = document.getElementById('btn-home-confirm');
 
   btn.disabled    = true;
   btn.textContent = 'Creating…';
@@ -167,11 +172,12 @@ document.getElementById('btn-home-confirm').addEventListener('click', async () =
       .insert([{
         name,
         password,
-        home_lat: selectedHomeLat,
-        home_lng: selectedHomeLng,
-        admin_token: adminToken,
+        home_lat:       selectedHomeLat,
+        home_lng:       selectedHomeLng,
+        admin_token:    adminToken,
+        admin_password: adminPassword,
       }])
-      .select('id, name, password, home_lat, home_lng, admin_token')
+      .select('*')
       .single();
 
   btn.disabled    = false;
@@ -185,13 +191,14 @@ document.getElementById('btn-home-confirm').addEventListener('click', async () =
 
 
   currentLobby = {
-  id: createdLobby.id,
-  name: createdLobby.name,
-  password: createdLobby.password,
-  home_lat: createdLobby.home_lat,
-  home_lng: createdLobby.home_lng,
-  admin_token: createdLobby.admin_token,
-};
+    id:             createdLobby.id,
+    name:           createdLobby.name,
+    password:       createdLobby.password,
+    home_lat:       createdLobby.home_lat,
+    home_lng:       createdLobby.home_lng,
+    admin_token:    createdLobby.admin_token,
+    admin_password: createdLobby.admin_password,
+  };
 
   //currentAdminToken = adminToken;
 

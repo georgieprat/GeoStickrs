@@ -201,14 +201,15 @@ function initAdminLoginModal() {
   closeButton.addEventListener('click', () => { modal.style.display = 'none'; input.value = ''; });
 
   loginButton.addEventListener('click', () => {
-    const lobby        = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
-    const enteredToken = input.value.trim();
+    const lobby    = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+    const entered  = input.value.trim();
 
-    if (!enteredToken) { alert('Please enter an admin code.'); return; }
+    if (!entered) { alert('Please enter an admin password.'); return; }
 
+    const correctPassword = lobby?.admin_password;
     if (
-      (lobby?.admin_token && enteredToken === lobby.admin_token) ||
-      enteredToken === GLOBAL_ADMIN_PASSWORD
+      (correctPassword && entered === correctPassword) ||
+      entered === GLOBAL_ADMIN_PASSWORD
     ) {
       localStorage.setItem(`geostickrs_admin_${lobby.name}`, lobby.admin_token);
       modal.style.display      = 'none';
@@ -217,7 +218,7 @@ function initAdminLoginModal() {
       return;
     }
 
-    alert('Wrong admin code.');
+    alert('Wrong admin password.');
   });
 }
 
