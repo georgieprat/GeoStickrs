@@ -6,10 +6,22 @@ import { calculateScore } from './score.js';
 let map           = null;
 let currentLobby  = null;
 let previewMarker = null;
+let clusterGroup  = null;
+const markersByUser = {}; // username → most recent marker
 
 export function init(mapInstance, lobbyRef) {
   map          = mapInstance;
   currentLobby = lobbyRef;
+  clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40, showCoverageOnHover: false });
+  map.addLayer(clusterGroup);
+
+  // Pre-fill username from lobby session
+  const lobbyData = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
+  if (lobbyData?.username) {
+    submission.username = lobbyData.username;
+    const input = document.getElementById('input-username');
+    if (input) input.value = lobbyData.username;
+  }
 }
 
 // ── SUBMISSION STATE ─────────────────────────────────
@@ -79,7 +91,7 @@ function hideAllSteps() {
 }
 
 // ── FAB ──────────────────────────────────────────────
-document.getElementById('fab-submit').addEventListener('click', () => {
+function startSubmissionFlow() {
   submission.lat          = null;
   submission.lng          = null;
   submission.photoFile    = null;
@@ -90,6 +102,28 @@ document.getElementById('fab-submit').addEventListener('click', () => {
   } else {
     openStep('username');
   }
+}
+
+document.getElementById('fab-submit').addEventListener('click', () => {
+  if (window._getActiveManhunt && window._getActiveManhunt()) {
+    document.getElementById('manhunt-mode-choice').style.display = 'flex';
+    return;
+  }
+  startSubmissionFlow();
+});
+
+document.getElementById('btn-choice-classic')?.addEventListener('click', () => {
+  document.getElementById('manhunt-mode-choice').style.display = 'none';
+  startSubmissionFlow();
+});
+
+document.getElementById('btn-choice-manhunt')?.addEventListener('click', () => {
+  document.getElementById('manhunt-mode-choice').style.display = 'none';
+  document.getElementById('manhunt-panel').style.display = 'block';
+});
+
+document.getElementById('btn-choice-cancel')?.addEventListener('click', () => {
+  document.getElementById('manhunt-mode-choice').style.display = 'none';
 });
 
 // ── STEP: USERNAME ───────────────────────────────────
@@ -229,7 +263,10 @@ document.getElementById('btn-confirm-submit').addEventListener('click', async ()
       photo_url: photoURL,
       score,
       lobby:     currentLobby.name,
+      mode:      'classic'
     }]);
+
+
     if (insertError) throw insertError;
 
     const savedLat = submission.lat;
@@ -277,22 +314,52 @@ export function placePreviewMarker(lat, lng) {
 
 export function addMarkerToMap(s) {
   const color = usernameToColor(s.username);
-  const icon  = L.divIcon({
+  const initial = (s.username?.trim()?.charAt(0) || '?').toUpperCase();
+
+  const icon = L.divIcon({
     className: '',
-    html: `<div style="
-      width:22px; height:22px;
-      border-radius:50% 50% 50% 0;
-      transform:rotate(-45deg);
-      background:${color.fill};
-      border:2.5px solid ${color.border};
-      box-shadow:0 2px 6px rgba(0,0,0,0.25);
-    "></div>`,
-    iconSize:    [22, 22],
-    iconAnchor:  [11, 22],
+    html: `
+      <div style="
+        position:relative;
+        width:22px;
+        height:22px;
+      ">
+        <div style="
+          width:22px;
+          height:22px;
+          border-radius:50% 50% 50% 0;
+          transform:rotate(-45deg);
+          background:${color.fill};
+          border:2.5px solid ${color.border};
+          box-shadow:0 2px 6px rgba(0,0,0,0.25);
+        "></div>
+
+        <div style="
+          position:absolute;
+          top:2px;
+          left:2px;
+          width:18px;
+          height:18px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:11px;
+          font-weight:700;
+          color:white;
+          text-shadow:0 1px 2px rgba(0,0,0,0.6);
+          pointer-events:none;
+        ">
+          ${initial}
+        </div>
+      </div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
     popupAnchor: [0, -24],
   });
 
-  const marker = L.marker([s.lat, s.lng], { icon }).addTo(map);
+  const marker = L.marker([s.lat, s.lng], { icon });
+  clusterGroup.addLayer(marker);
   marker.bindPopup(`
     <div style="font-family:sans-serif;font-size:13px;max-width:180px;line-height:1.5;">
       <span style="display:inline-block;width:10px;height:10px;border-radius:50%;
@@ -301,11 +368,28 @@ export function addMarkerToMap(s) {
       🏆 <strong>${s.score} pts</strong>
       ${s.photo_url
         ? `<br><img src="${s.photo_url}"
-            style="max-width:160px;margin-top:6px;border-radius:6px;display:block;">`
+            onclick="window._openPhotoLightbox('${s.photo_url}')"
+            style="max-width:160px;margin-top:6px;border-radius:6px;display:block;cursor:pointer;">`
         : ''}
     </div>
   `);
+  marker.on('click', () => {
+    map.setView([s.lat, s.lng]);
+  });
+
+  // stickers are loaded newest-first, so first one per user = most recent
+  if (!markersByUser[s.username]) markersByUser[s.username] = marker;
 }
+
+export function flyToUser(username) {
+  const marker = markersByUser[username];
+  if (!marker) return;
+  clusterGroup.zoomToShowLayer(marker, () => {
+    map.setView(marker.getLatLng());
+    marker.openPopup();
+  });
+}
+window._flyToUser = flyToUser;
 
 export async function loadAllStickers() {
   const { data, error } = await supabase
@@ -315,49 +399,128 @@ export async function loadAllStickers() {
     .order('created_at', { ascending: false });
   if (error) { console.error(error); return; }
   data.forEach(addMarkerToMap);
+
+  if (clusterGroup.getLayers().length > 0) {
+    map.fitBounds(clusterGroup.getBounds(), { padding: [40, 40], maxZoom: 14 });
+  }
 }
 
 // ── LEADERBOARD ──────────────────────────────────────
 export async function loadLeaderboard() {
-  const mode = document.getElementById('leaderboard-mode')?.value || 'top';
+  const activeFilter = document.querySelector('.lb-filter.active');
+  const mode = activeFilter?.dataset.mode || 'total';
   const list = document.getElementById('leaderboard-list');
   if (!list) return;
   list.innerHTML = '<li class="loading">Loading…</li>';
 
-  const { data, error } = await supabase
-    .from('stickers')
-    .select('username, score')
-    .eq('lobby', currentLobby.name)
-    .order('score', { ascending: false });
+  let query = supabase
+  .from('stickers')
+  .select('username, score, mode')
+  .eq('lobby', currentLobby.name);
+
+if (mode === 'classic') {
+  query = query.eq('mode', 'classic');
+}
+
+if (mode === 'manhunt') {
+  query = query.eq('mode', 'manhunt');
+}
+
+if (mode === 'landmark') {
+  query = query.eq('mode', 'landmark');
+}
+
+const { data, error } = await query.order('score', { ascending: false });
 
   if (error || !data) return;
 
   let entries = [];
-  if (mode === 'top') {
-    entries = data.slice(0, 5);
-  } else {
-    const totals = {};
-    data.forEach(s => { totals[s.username] = (totals[s.username] || 0) + s.score; });
-    entries = Object.entries(totals)
-      .map(([username, score]) => ({ username, score }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-  }
+
+
+ if (mode === 'classic' ||
+    mode === 'manhunt' ||
+    mode === 'landmark') {
+
+  const totals = {};
+
+  data.forEach(s => {
+    totals[s.username] =
+      (totals[s.username] || 0) + s.score;
+  });
+
+  entries = Object.entries(totals)
+    .map(([username, score]) => ({ username, score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+} else {
+
+  // TOTAL SCORE
+
+  const totals = {};
+
+  data.forEach(s => {
+    totals[s.username] =
+      (totals[s.username] || 0) + s.score;
+  });
+
+  entries = Object.entries(totals)
+    .map(([username, score]) => ({ username, score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+}
+
+
+
 
   list.innerHTML = entries.length === 0
     ? '<li class="loading">No stickers yet!</li>'
     : entries.map((s, i) => {
         const color = usernameToColor(s.username);
+        const escaped = s.username.replace(/'/g, "\\'");
         return `<li>
           <span class="lb-rank">${['🥇','🥈','🥉','4.','5.'][i]}</span>
           <span class="lb-dot" style="background:${color.fill};border-color:${color.border};"></span>
-          <span class="lb-name">${s.username}</span>
+          <span class="lb-name lb-name-link" onclick="window._flyToUser('${escaped}')">${s.username}</span>
           <span class="lb-score">${s.score} pts</span>
         </li>`;
       }).join('');
 }
 
-document.getElementById('leaderboard-mode')?.addEventListener('change', loadLeaderboard);
+// Leaderboard pill filters
+document.querySelectorAll('.lb-filter').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.lb-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadLeaderboard();
+  });
+});
+
+// Leaderboard collapse toggle
+document.getElementById('leaderboard-header')?.addEventListener('click', () => {
+  const body   = document.getElementById('leaderboard-body');
+  const toggle = document.getElementById('btn-leaderboard-toggle');
+  const collapsed = body.classList.toggle('collapsed');
+  toggle.classList.toggle('collapsed', collapsed);
+  toggle.textContent = collapsed ? '▶' : '▼';
+});
+
+//Prevents double-trigger
+document.getElementById('btn-leaderboard-toggle')
+  ?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+// Auto-collapse on mobile on load
+if (window.innerWidth <= 600) {
+  const body   = document.getElementById('leaderboard-body');
+  const toggle = document.getElementById('btn-leaderboard-toggle');
+  if (body && toggle) {
+    body.classList.add('collapsed');
+    toggle.classList.add('collapsed');
+    toggle.textContent = '▶';
+  }
+}
 
 // ── TOAST & ERRORS ────────────────────────────────────
 export function showToast(msg) {
@@ -372,3 +535,22 @@ export function showStepError(step, msg) {
   const el = document.getElementById(`step-${step}-error`);
   if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
+
+// ── PHOTO LIGHTBOX ────────────────────────────────────
+window._openPhotoLightbox = function(url) {
+  const lightbox = document.getElementById('photo-lightbox');
+  const img      = document.getElementById('photo-lightbox-img');
+  img.src = url;
+  lightbox.style.display = 'flex';
+};
+
+function closeLightbox() {
+  document.getElementById('photo-lightbox').style.display = 'none';
+}
+
+document.getElementById('photo-lightbox-backdrop')?.addEventListener('click', closeLightbox);
+document.getElementById('photo-lightbox-close')?.addEventListener('click', closeLightbox);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeLightbox();
+});

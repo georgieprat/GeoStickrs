@@ -1,58 +1,170 @@
 // ── MAIN ENTRY POINT ────────────────────────────────
-// Imports all modules and wires them together.
-// Modules live in the js/ folder.
+// Wires together all modules. Feature logic lives in js/.
 
 import './js/lobby.js';
-import { init, loadAllStickers, loadLeaderboard, submission } from './js/submission.js';
+import './js/admin.js';
+import { init, loadAllStickers, loadLeaderboard, submission, placePreviewMarker } from './js/submission.js';
+import { initManhunt,      loadManhuntFromSupabase }       from './js/manhunt.js';
+import { initLandmark, loadActiveLandmarkHunt, subscribeToSubmissionUpdates } from './js/landmark.js';
+import {
+  initLobbySettings, isHomePickerActive, saveNewHomeLocation,
+} from './js/lobby-settings.js';
 
-// ── MAP SETUP ────────────────────────────────────────
+// ── MAP ──────────────────────────────────────────────
 let map = null;
 
 function initMap() {
   if (map) return;
-  map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CARTO'
-  }).addTo(map);
 
-  // Read current lobby from session
+  map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+
+  const cartoLight = L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  {
+    attribution: '© OpenStreetMap © CARTO',
+  }
+);
+
+const osm = L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {
+    attribution: '© OpenStreetMap contributors',
+  }
+);
+
+const satellite = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: '© Esri',
+  }
+);
+
+const topo = L.tileLayer(
+  'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  {
+    attribution: '© OpenTopoMap',
+  }
+);
+
+// Standardkarte
+cartoLight.addTo(map);
+
+// Umschalter
+const layerControl = L.control.layers(
+  {
+    "🌙 Light": cartoLight,
+    "🗺️ OpenStreetMap": osm,
+    "🛰️ Satellite": satellite,
+    "⛰️ Topographic": topo,
+  },
+  null,
+  {
+    collapsed: true,
+    position: 'topleft'
+  }
+).addTo(map);
+
+// Auto-collapse after selecting a basemap on touch devices
+const isTouchDevice =
+  'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+if (isTouchDevice) {
+  map.on('baselayerchange', () => {
+    layerControl.collapse();
+  });
+}
+
   const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
 
-  // Pass map and lobby into submission module
+  // Init all modules that need the map
   init(map, lobby);
+  initManhunt(map);
+  initLandmark(map);
+  initLobbySettings(map);
 
-  // Map click for location picking — dispatched to submission module
+  // ── Map click dispatcher ─────────────────────────
   map.on('click', (e) => {
-    submission.lat = e.latlng.lat;
-    submission.lng = e.latlng.lng;
+    const { lat, lng } = e.latlng;
+
+    if (isHomePickerActive()) {
+      saveNewHomeLocation(lat, lng);
+      return;
+    }
+
+    // Normal sticker placement
+    submission.lat = lat;
+    submission.lng = lng;
     const el = document.getElementById('location-instruction');
     if (el) {
-      el.textContent = `📍 ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)} — press Continue.`;
-      el.style.color  = '#16a34a';
+      el.textContent = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)} — press Continue.`;
+      el.style.color = '#16a34a';
     }
     document.getElementById('btn-location-next').disabled = false;
-
-    // Place preview marker via submission module
-    import('./js/submission.js').then(m => m.placePreviewMarker(e.latlng.lat, e.latlng.lng));
+    placePreviewMarker(lat, lng);
   });
+
+  // Home location marker
+  if (lobby?.home_lat && lobby?.home_lng) {
+    const homeIcon = L.divIcon({
+      className: '',
+      html: `<div style="
+        font-size: 22px;
+        line-height: 1;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      ">🏠</div>`,
+      iconSize:    [24, 24],
+      iconAnchor:  [12, 22],
+      popupAnchor: [0, -26],
+    });
+    L.marker([lobby.home_lat, lobby.home_lng], { icon: homeIcon, zIndexOffset: 1000 })
+      .addTo(map)
+      .bindPopup(`<strong>🏠 Home: ${lobby.name}</strong>`);
+  }
 
   loadAllStickers();
   loadLeaderboard();
+  loadActiveLandmarkHunt();
+  loadManhuntFromSupabase();
+  subscribeToSubmissionUpdates();
 }
 
 // ── ENTER APP ────────────────────────────────────────
 function enterApp() {
   document.getElementById('lobby-screen').style.display = 'none';
   document.getElementById('app').style.display          = 'block';
+
   const lobby = JSON.parse(sessionStorage.getItem('geostickrs_lobby'));
   document.getElementById('lobby-badge-name').textContent = `🏠 ${lobby?.name ?? ''}`;
+
+  const adminButton = document.getElementById('btn-admin-panel');
+  if (adminButton) adminButton.style.display = 'inline-block';
+
   initMap();
+  setTimeout(() => map?.invalidateSize(), 300);
 }
 
-// Expose globally so lobby.js can call window._enterApp()
+// Expose so lobby.js can call window._enterApp()
 window._enterApp = enterApp;
 
-// Auto-enter if session already has a lobby (page refresh)
+// Auto-enter on page refresh if session exists
 if (sessionStorage.getItem('geostickrs_lobby')) {
   window.addEventListener('load', enterApp);
 }
+
+// ── INTRO SCREEN ─────────────────────────────────────
+window.addEventListener('load', () => {
+  const introScreen = document.getElementById('intro-screen');
+  const skipButton  = document.getElementById('btn-intro-skip');
+  if (!introScreen || !skipButton) return;
+
+  if (!localStorage.getItem('geostickrs_intro_seen')) {
+    introScreen.style.display = 'flex';
+  }
+
+  skipButton.addEventListener('click', () => {
+    localStorage.setItem('geostickrs_intro_seen', 'true');
+    introScreen.style.display = 'none';
+  });
+});

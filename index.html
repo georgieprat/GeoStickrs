@@ -5,30 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>GeoStickrs</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
-  <!-- ── LOBBY SCREEN (shown first) ───────────────── -->
-  <div id="lobby-screen">
+<!-- INTRO SCREEN -->
+<div id="intro-screen">
+  <div id="intro-card">
+    <div class="step-icon">📍</div>
+
+    <h1>Welcome to GeoStickrs</h1>
+
+    <p>
+      GeoStickrs lets you place stickers around the world,
+      compete with your friends and discover new locations.
+    </p>
+
+    <div class="intro-steps">
+      <p><strong>1.</strong> Join or create a lobby</p>
+      <p><strong>2.</strong> Place a sticker on the map</p>
+      <p><strong>3.</strong> Add a photo (optional)</p>
+      <p><strong>4.</strong> Earn points and climb the leaderboard</p>
+    </div>
+
+    <button id="btn-intro-skip" class="btn-primary">
+      Got it →
+    </button>
+  </div>
+</div>
+
+
+
+<!-- ── LOBBY SCREEN (shown first) ───────────────── -->
+<div id="lobby-screen">
+  <div id="lobby-content">
     <div id="lobby-card">
       <div class="step-icon">📍</div>
       <h1>GeoStickrs</h1>
-      <p class="lobby-subtitle">Enter your lobby password to continue</p>
+      
+      <!-- ── LOBBY SELECTOR ─────────────────────────── -->
+      <!--<select id="lobby-select">
+        <option value="" disabled selected>Select a lobby…</option>
+      </select> -->
+      
+      <p class="lobby-subtitle">Enter your lobby password and username</p>
       <input type="password" id="lobby-password" placeholder="Lobby password" autocomplete="off">
+      <input type="text" id="lobby-username" placeholder="Your username" autocomplete="off" maxlength="24">
       <p id="lobby-error" class="step-error"></p>
       <button id="btn-lobby-join" class="btn-primary">Join lobby →</button>
+      
       <button id="btn-lobby-create" class="btn-secondary">Create lobby →</button>
+      
       <div id="lobby-creator">
         <div class="horizontal-line"></div>
         <p class="lobby-subtitle">Enter your new lobby name and password</p>
         <input type="text" id="lobby-new-name" placeholder="Lobby name" autocomplete="off">
-        <input type="password" id="lobby-new-password" placeholder="Lobby password" autocomplete="off">
+        <input type="password" id="lobby-new-password" placeholder="Lobby password (for players)" autocomplete="off">
+        <input type="password" id="lobby-new-admin-password" placeholder="Admin password (only for you)" autocomplete="off">
         <p id="step-lobby-create-error" class="step-error"></p>
         <button id="btn-lobby-home" class="btn-primary">Next: set home location →</button>
-      </div>    
-    </div>     
+      </div>      
+    </div>  
   </div>
+  
+  <div id="lobby-screen-legal">
+    “<it><b>Please use this app responsibly. Do not capture or share illegal, harmful, or non-consensual content. Respect privacy, consent, and local laws. You are responsible for ensuring you have permission to photograph people and places.</b></it>”<br>
+    -Your GeoStickrs Team ✌️ <br> 
+  </div>  
+</div>
 
   <!-- Home location picker (shown over map) -->
   <div id="lobby-home-picker" style="display:none;">
@@ -61,25 +107,31 @@
       </div>
     </div>
 
-    <!-- LOBBY BADGE (top left) -->
+    <!-- LOBBY BADGE (top right) -->
     <div id="lobby-badge">
       <span id="lobby-badge-name"></span>
+      <button id="btn-settings-modal" title="Settings">⚙️</button>
       <button id="btn-leave-lobby">Leave</button>
     </div>
 
     <!-- LEADERBOARD -->
     <div id="leaderboard">
-      <div class="leaderboard-header">
+      <div class="leaderboard-header" id="leaderboard-header">
         <h2>🏆 Leaderboard</h2>
-        <select id="leaderboard-mode">
-          <option value="top">Top spots</option>
-          <option value="total">Total score</option>
-        </select>
+        <button id="btn-leaderboard-toggle" class="lb-toggle" aria-label="Toggle leaderboard">▼</button>
       </div>
-      <ul id="leaderboard-list">
-        <li class="loading">Loading…</li>
-      </ul>
-    </div>                    
+      <div id="leaderboard-body">
+        <div class="lb-filters">
+          <button class="lb-filter active" data-mode="total">Total</button>
+          <button class="lb-filter" data-mode="classic">📍</button>
+          <button class="lb-filter" data-mode="manhunt">🏃</button>
+          <button class="lb-filter" data-mode="landmark">🏛️</button>
+        </div>
+        <ul id="leaderboard-list">
+          <li class="loading">Loading…</li>
+        </ul>
+      </div>
+    </div>
 
     <!-- FAB -->
     <button id="fab-submit">＋ Post a sticker</button>
@@ -160,11 +212,453 @@
 
   </div>
 
-  <!-- TOAST -->
-  <div id="toast"></div>
+
+<!-- ── ADMIN PANEL ───────────────────────────────── -->
+<div id="admin-panel" style="display:none;">
+  <div id="admin-card">
+    <div class="admin-header">
+      <div>
+        <h2>🎮 Admin / Gamemaster</h2>
+        <p>Manage your lobby, games and safety tools.</p>
+      </div>
+      <button id="btn-admin-close">×</button>
+    </div>
+
+    <div class="admin-section">
+      <h3>Gamemodes</h3>
+
+      <button class="admin-action" id="btn-admin-treasure">
+        🏛️ Sticker Hunt
+      </button>
+
+      <div id="treasure-panel" style="display:none;">
+        <div class="admin-section">
+          <h3>🏛️ Sticker Hunt</h3>
+
+          <!-- Create phase -->
+          <div id="lsh-create-form">
+            <label for="lsh-hint-1">Hint 1 *</label>
+            <input type="text" id="lsh-hint-1" class="admin-input" placeholder="e.g. Resselpark, near TU main building" autocomplete="off">
+
+            <label for="lsh-hint-2">Hint 2 (optional)</label>
+            <input type="text" id="lsh-hint-2" class="admin-input" placeholder="Additional hint…" autocomplete="off">
+
+            <label for="lsh-hint-3">Hint 3 (optional)</label>
+            <input type="text" id="lsh-hint-3" class="admin-input" placeholder="Additional hint…" autocomplete="off">
+
+            <label>Photo hint (optional)</label>
+            <input type="file" id="lsh-hint-photo-input" accept="image/*" style="display:none;">
+            <button type="button" id="btn-lsh-hint-photo" class="admin-action" style="margin-bottom:6px;">📷 Add photo hint</button>
+            <div id="lsh-hint-photo-preview-wrap" style="display:none;margin-bottom:8px;">
+              <img id="lsh-hint-photo-preview" style="max-width:100%;max-height:120px;border-radius:8px;" alt="Preview">
+            </div>
+
+            <button class="admin-action" id="btn-lsh-post">
+              📍 Post Hidden Sticker
+            </button>
+          </div>
+
+          <!-- Active phase -->
+          <div id="lsh-active-form" style="display:none;">
+            <p style="color:#16a34a;font-weight:600;margin-bottom:8px;">✅ Hunt is active!</p>
+            <button class="admin-action" id="btn-lsh-review-submissions">
+              📋 Review Submissions
+            </button>
+            <button class="admin-action admin-action-danger" id="btn-lsh-stop">
+              🛑 End Hunt
+            </button>
+          </div>
+
+          <!-- Landmark submissions review -->
+          <div id="lsh-review-panel" style="display:none;">
+            <h3>🔍 Sticker Hunt Submissions</h3>
+            <div id="lsh-review-list"></div>
+            <button class="admin-action" id="btn-lsh-review-close">← Back</button>
+          </div>
+
+          <button class="admin-action" id="btn-treasure-back">← Back</button>
+        </div>
+      </div>
+
+      <button class="admin-action" id="btn-admin-manhunt">
+        🏃 Move & Seek
+      </button>
+
+      <div id="manhunt-admin-panel" style="display:none;">
+
+        <div class="admin-section">
+          <h3>🏃 Move & Seek Manager</h3>
+
+          <label for="manhunt-radius">Search area radius</label>
+          <select id="manhunt-radius" class="admin-select">
+            <option value="tiny">Tiny (~20 m) 🧪</option>
+            <option value="small">Small (~200 m)</option>
+            <option value="medium" selected>Medium (~500 m)</option>
+            <option value="large">Large (~1 km)</option>
+          </select>
+
+          <label for="manhunt-duration">Duration</label>
+          <select id="manhunt-duration" class="admin-select">
+            <option value="15">15 minutes</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="0">No time limit</option>
+          </select>
+
+          <button class="admin-action" id="btn-manhunt-create">
+            ➕ Create Move & Seek
+          </button>
+
+          <button class="admin-action" id="btn-manhunt-start" style="display:none;">
+            ▶ Start Move & Seek
+          </button>
+
+          <button class="admin-action" id="btn-manhunt-stop" style="display:none;">
+            🛑 End Move & Seek
+          </button>
+
+          <button class="admin-action" id="btn-manhunt-back">
+            ← Back
+          </button>
+        </div>
+
+      </div>
+
+      <!--<button class="admin-action" id="btn-admin-capture">
+        🚩 Capture The Sticker
+      </button>-->
+    </div>
+
+    <div class="admin-section">
+      <h3>Moderation</h3>
+      <button class="admin-action" id="btn-admin-review">🖼 Review Submissions</button>
+
+      <div id="review-panel" style="display:none;">
+
+        <h3>Submission Review 🔍</h3>
+
+        <div id="review-list"></div>
+
+        <button class="admin-action" id="btn-review-close">
+          ← Back
+        </button>
+
+      </div>
+
+      <button class="admin-action" id="btn-admin-rules">📋 Rules & Legal</button>
+
+    </div>
+
+    <div class="admin-section">
+      <h3>Lobby</h3>
+      <button class="admin-action" id="btn-admin-settings">⚙️ Lobby Settings</button>
+
+      <div id="lobby-settings-panel" style="display:none;">
+        <h3>⚙️ Lobby Settings</h3>
+
+        <label for="settings-lobby-name">Rename Lobby</label>
+        <input type="text" id="settings-lobby-name" class="admin-input" placeholder="New lobby name" autocomplete="off">
+        <button class="admin-action" id="btn-settings-rename">✏️ Save Name</button>
+
+        <label for="settings-lobby-password">Change Password</label>
+        <input type="password" id="settings-lobby-password" class="admin-input" placeholder="New password" autocomplete="off">
+        <button class="admin-action" id="btn-settings-password">🔑 Save Password</button>
+
+        <button class="admin-action" id="btn-settings-home">🏠 Change Home Location</button>
+
+        <button class="admin-action admin-action-danger" id="btn-settings-delete">🗑 Delete Lobby</button>
+
+        <button class="admin-action" id="btn-settings-back">← Back</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MANHUNT MOBILE FAB (mobile only, shown when manhunt active) -->
+<button id="manhunt-mobile-fab" style="display:none;">
+  🏃 <span id="manhunt-fab-timer"></span>
+</button>
+
+<!-- MANHUNT PLAYER PANEL -->
+<div id="manhunt-panel" style="display:none;">
+  <div class="game-panel-header">
+    <span class="game-panel-icon">🏃</span>
+    <div>
+      <h3>Move & Seek</h3>
+      <span id="manhunt-status" class="game-panel-subtitle">Active Move & Seek running</span>
+      <span id="manhunt-timer" style="font-size:12px;font-weight:700;color:#ef4444;"></span>
+    </div>
+  </div>
+  <div class="game-panel-hint-box">
+    <p id="manhunt-target" style="display:none;font-size:13px;margin-bottom:6px;">
+      🎯 Find: <strong id="manhunt-target-name"></strong>
+    </p>
+    <p id="manhunt-hint">Find the hider inside the red search area.</p>
+    <p id="manhunt-distance" style="margin-top:6px;font-weight:600;color:#ef4444;"></p>
+  </div>
+  <p id="manhunt-hider-note" style="display:none;font-weight:700;color:#ef4444;text-align:center;margin-top:6px;">
+    🙈 You are the hider!
+  </p>
+  <button id="btn-manhunt-caught" class="btn-primary game-panel-btn">
+    📸 Caught!
+  </button>
+</div>
+
+
+<!-- LANDMARK MOBILE FAB (shown when landmark hunt active) -->
+<button id="landmark-mobile-fab" style="display:none;">
+  🏛️ <span>Found it?</span>
+</button>
+
+<!-- LANDMARK STICKER HUNT PLAYER PANEL -->
+<div id="landmark-panel" style="display:none;">
+  <button id="btn-landmark-panel-close" class="game-panel-close-btn" aria-label="Close">×</button>
+  <div class="game-panel-header">
+    <span class="game-panel-icon">🏛️</span>
+    <div>
+      <h3>Sticker Hunt</h3>
+      <span class="game-panel-subtitle">Find the hidden sticker!</span>
+    </div>
+  </div>
+  <div class="game-panel-hint-box">
+    <p id="landmark-current-hint">Loading hint…</p>
+    <p id="landmark-hint-2" style="display:none;margin-top:6px;"></p>
+    <p id="landmark-hint-3" style="display:none;margin-top:6px;"></p>
+    <div id="landmark-hint-photo-wrap" style="display:none;margin-top:10px;">
+      <img id="landmark-hint-photo" style="max-width:100%;border-radius:8px;cursor:pointer;" alt="Hint photo">
+    </div>
+  </div>
+  <button id="btn-lsh-found" class="btn-primary game-panel-btn">
+    🔍 I think I found it!
+  </button>
+</div>
+
+<!-- MANHUNT CAUGHT MODAL (photo proof — seeker) -->
+<div id="manhunt-caught-modal" style="display:none;">
+  <div class="step-card">
+    <div class="step-header">
+      <span class="step-icon">📸</span>
+      <h2>Caught!</h2>
+      <p>Take a photo as proof</p>
+    </div>
+    <div id="manhunt-caught-preview-wrap" style="display:none;">
+      <img id="manhunt-caught-preview" alt="Preview">
+    </div>
+    <div class="camera-buttons">
+      <button id="btn-manhunt-caught-camera" class="btn-secondary">📷 Take photo</button>
+      <button id="btn-manhunt-caught-upload" class="btn-secondary">🖼 Upload image</button>
+    </div>
+    <input type="file" id="manhunt-caught-camera-input" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="manhunt-caught-file-input" accept="image/*" style="display:none;">
+    <p id="manhunt-caught-status" style="font-size:13px;color:#52525b;margin-top:8px;"></p>
+    <div class="step-actions">
+      <button id="btn-manhunt-caught-cancel" class="btn-secondary">Cancel</button>
+      <button id="btn-manhunt-caught-submit" class="btn-primary" disabled>Submit 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- HIDER CATCH CONFIRM MODAL -->
+<div id="manhunt-hider-confirm-modal" style="display:none;">
+  <div class="step-card">
+    <div class="step-header">
+      <span class="step-icon">🚨</span>
+      <h2>You've been caught!</h2>
+      <p id="manhunt-caught-by-label">A seeker says they found you</p>
+    </div>
+    <div id="manhunt-caught-proof-wrap" style="display:none;">
+      <img id="manhunt-caught-proof-img" alt="Proof photo" style="width:100%;max-width:220px;border-radius:8px;margin:8px 0;">
+    </div>
+    <div class="step-actions">
+      <button id="btn-hider-deny-caught" class="btn-secondary">❌ Deny</button>
+      <button id="btn-hider-confirm-caught" class="btn-primary">✅ Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOUND MODAL (player photo submission) -->
+<div id="lsh-found-modal" style="display:none;">
+  <div class="step-card">
+    <div class="step-header">
+      <span class="step-icon">🔍</span>
+      <h2>Found it!</h2>
+      <p>Take a photo of the sticker as proof</p>
+    </div>
+    <div id="lsh-photo-preview-wrap" style="display:none;">
+      <img id="lsh-photo-preview" alt="Preview">
+    </div>
+    <div class="camera-buttons">
+      <button id="btn-lsh-camera" class="btn-secondary">📷 Take photo</button>
+      <button id="btn-lsh-upload" class="btn-secondary">🖼 Upload image</button>
+    </div>
+    <input type="file" id="lsh-camera-input" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="lsh-file-input-found" accept="image/*" style="display:none;">
+    <p id="lsh-submit-status" style="font-size:13px;color:#52525b;margin-top:8px;"></p>
+    <div class="step-actions">
+      <button id="btn-lsh-found-cancel" class="btn-secondary">Cancel</button>
+      <button id="btn-lsh-submit" class="btn-primary" disabled>Submit 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settings-modal" style="display:none;">
+  <div id="settings-backdrop"></div>
+  <div id="settings-card">
+    <div id="settings-header">
+      <span>⚙️ Settings</span>
+      <button id="btn-settings-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="settings-section">
+      <h4 class="settings-section-title">📋 Rules &amp; Legal</h4>
+      <div id="settings-rules-content">
+        <p><em>Please use this app responsibly. Do not capture or share illegal, harmful, or non-consensual content. Respect privacy, consent, and local laws. You are responsible for ensuring you have permission to photograph people and places.</em><br>— Your GeoStickrs Team</p>
+        <p><b>1. Lawful Use</b><br>Use the app in compliance with all applicable laws. Do not use it for unlawful surveillance, harassment, or stalking. You are responsible for having the legal right to capture images of people and places.</p>
+        <p><b>2. Consent &amp; Privacy (GDPR)</b><br>Obtain consent before capturing identifiable individuals where required. Do not capture images in private spaces without permission. Avoid uploading images containing sensitive personal data without consent.</p>
+        <p><b>3. Prohibited Content</b><br>The app must not be used to capture or distribute CSAM, non-consensual intimate imagery, content facilitating violence, or content used to harass or dox individuals.</p>
+        <p><b>4. Harassment &amp; Safety</b><br>Do not use the app to threaten or intimidate others. Do not use it while driving or in ways that endanger yourself or others.</p>
+        <p><b>5. Sensitive Locations</b><br>Respect restrictions in healthcare facilities, religious sites, schools, and private property where photography is prohibited.</p>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4 class="settings-section-title">🔒 Admin</h4>
+      <div id="settings-admin-login-area">
+        <input
+          id="admin-token-input"
+          type="password"
+          placeholder="Enter admin password"
+          autocomplete="off"
+        >
+        <button id="btn-admin-login" class="btn-primary">Login</button>
+      </div>
+      <div id="settings-admin-open-area" style="display:none;">
+        <button id="btn-settings-open-admin" class="btn-primary">Open Admin Panel →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MANHUNT MODE CHOICE -->
+<div id="manhunt-mode-choice" style="display:none;">
+  <div class="manhunt-choice-card">
+    <h3>🏃 Move & Seek is active</h3>
+    <p>What do you want to do?</p>
+    <button id="btn-choice-classic" class="btn-primary">📍 Classic Sticker</button>
+    <button id="btn-choice-manhunt" class="btn-secondary">🏃 Go to Move & Seek</button>
+    <button id="btn-choice-cancel" class="btn-ghost">Cancel</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- PHOTO LIGHTBOX -->
+<div id="photo-lightbox" style="display:none;">
+  <div id="photo-lightbox-backdrop"></div>
+  <img id="photo-lightbox-img" alt="Photo">
+  <button id="photo-lightbox-close">×</button>
+</div>
+
+
+<div id="admin-login-modal" style="display:none;">
+  <div class="admin-login-content">
+
+    <h3>🔒 Admin Login</h3>
+
+    <input
+      id="admin-token-input"
+      type="password"
+      placeholder="Enter admin code"
+      autocomplete="off"
+    >
+
+    <button id="btn-admin-login">
+      Login
+    </button>
+
+    <button id="btn-admin-login-close">
+      Cancel
+    </button>
+
+  </div>
+</div>
+
+<!-- Legal Rules -->
+<div class="RulesAndLegal" id="RulesAndLegal" style="display: none;">
+  “<it>Please use this app responsibly. Do not capture or share illegal, harmful, or non-consensual content. Respect privacy, consent, and local laws. You are responsible for ensuring you have permission to photograph people and places.</it>”<br>
+  -Your GeoStickrs Team <br>
+  <br>
+  <b>1. Lawful Use Requirement</b><br>
+  Users must only use the application in compliance with all applicable laws and regulations.<br>
+    •	Users must not use the app to capture, store, or distribute content that violates local, national, or international law.<br>
+    •	The app must not be used for unlawful surveillance, harassment, or stalking.<br>
+    •	Users are responsible for ensuring they have the legal right to capture images of people, locations, and objects.<br>
+<br>
+  <b>2. Consent & Privacy (GDPR-aligned)</b><br>
+  Respect for privacy is mandatory.<br>
+    •	Users should obtain consent before capturing identifiable individuals where legally required.<br>
+    •	Do not intentionally capture or process images in private spaces where there is a reasonable expectation of privacy (e.g., homes, bathrooms, private offices) without permission.<br>
+    •	The app must not encourage or facilitate covert recording of individuals.<br>
+    •	Users should avoid uploading or sharing images containing sensitive personal data without consent.<br>
+  If operating in the EU:<br>
+    •	Personal data in images (faces, license plates, identifiable features) is subject to GDPR.<br>
+    •	Users may have obligations to ensure lawful basis for processing (e.g., consent, legitimate interest).<br>
+<br>
+  <b>3. Prohibited Content</b><br>
+  The app must not be used to capture or distribute:<br>
+    •	Child sexual abuse material (CSAM) — strictly prohibited, must be reported and removed<br>
+    •	Non-consensual intimate imagery (including “revenge porn”)<br>
+    •	Content involving exploitation, trafficking, or abuse<br>
+    •	Content that facilitates violence or harm toward individuals or groups<br>
+    •	Content that identifies private individuals for harassment or targeting (doxxing)<br>
+<br>
+  <b>4. Harassment & Harm Prevention</b><br>
+  Users must not:<br>
+    •	Use the app to harass, threaten, or intimidate others<br>
+    •	Take photos with the intent to shame, blackmail, or exploit individuals<br>
+    •	Record individuals in vulnerable situations (medical emergencies, distress) without a legitimate reason<br>
+<br>
+  <b>5. Public Safety Restrictions</b><br>
+  Users must not use the app in ways that endanger themselves or others:<br>
+    •	No use while driving, cycling, or operating machinery in a dangerous manner<br>
+    •	No interference with emergency services or restricted areas (e.g., crime scenes, military zones)<br>
+    •	Do not obstruct law enforcement or emergency personnel<br>
+<br>
+  <b>6. Sensitive Locations</b><br>
+  Users should respect restrictions and social norms in sensitive areas:<br>
+    •	Healthcare facilities (hospitals, clinics)<br>
+    •	Religious sites<br>
+    •	Schools and childcare environments<br>
+    •	Government or secure facilities<br>
+    •	Private property where photography is prohibited<br>
+  Users are responsible for checking and following posted signage and local rules.<br>
+<br>
+  <b>7. Intellectual Property Rights</b><br>
+    •	Users must not capture or distribute copyrighted works in violation of applicable law.<br>
+    •	This includes artworks, performances, branded content, or proprietary materials where photography is restricted.<br>
+    •	Users are responsible for ensuring they have rights to use and share captured images.<br>
+<br>
+  <b>8. Enforcement Policy</b><br>
+  Violations may result in:<br>
+    •	Content removal<br>
+    •	Temporary suspension of features<br>
+    •	Reporting to relevant authorities where legally required (especially in cases involving CSAM, threats, or serious illegal activity)<br>
+<br>
+  <b>9. User Responsibility Clause</b><br>
+  Users acknowledge that:<br>
+    •	They are solely responsible for how they use the camera features<br>
+    •	The application provider is not liable for misuse of captured content<br>
+    •	They must comply with all applicable laws in their jurisdiction<br>
+
+</div>
+
 
   <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
   <script src="https://unpkg.com/osmtogeojson@3.0.0-beta.5/osmtogeojson.js"></script>
   <script type="module" src="script.js"></script>

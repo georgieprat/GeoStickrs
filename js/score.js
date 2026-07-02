@@ -3,14 +3,16 @@
 // the lobby's home point and the location's elevation.
 
 export async function calculateScore(lat, lng, homeLat, homeLng) {
-  let score = 0;
+  let score = 1;
+  const MAX_DISTANCE = 20000;
 
-  // Distance bonus: 1 pt per 100 km, max 50 pts
   const distKm = getDistanceKm(lat, lng, homeLat, homeLng);
-  score += Math.min(Math.round(distKm / 100), 50);
+  const dist_scale = Math.min(distKm / MAX_DISTANCE, 1);
+  const eased = Math.sqrt(dist_scale);
+  score += Math.floor(eased * 100);
 
   // Remoteness bonus: +10 pts if over 1000 km from home
-  if (distKm > 1000) score += 10;
+  //if (distKm > 1000) score += 10;
 
   // Altitude bonus: 1 pt per 100 m elevation, max 30 pts
   try {
@@ -18,7 +20,10 @@ export async function calculateScore(lat, lng, homeLat, homeLng) {
       `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`
     );
     const data = await res.json();
-    score += Math.min(Math.round(Math.max(0, data.elevation[0]) / 100), 30);
+    let elevation = Math.max(0, data.elevation?.[0] ?? 0);
+    if (elevation >= 2000) {
+      score = Math.floor(score * (1 + (Math.min(Math.floor(elevation / 1000), 9)/10)));
+    }
   } catch (e) { /* elevation is optional */ }
 
   return { score };

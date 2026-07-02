@@ -1,8 +1,10 @@
 import { supabase } from './supabase.js';
 
+
 // ── LOBBY STATE ──────────────────────────────────────
 // Exported so map.js and submission.js can read current lobby
 export let currentLobby = null;
+export let currentAdminToken = null;
 
 // ── RESTORE FROM SESSION ─────────────────────────────
 const savedLobby = sessionStorage.getItem('geostickrs_lobby');
@@ -15,17 +17,31 @@ if (savedLobby) {
 }
 
 // ── JOIN LOBBY ───────────────────────────────────────
+// Pre-fill username from last session
+const savedUsername = localStorage.getItem('geostickrs_username');
+if (savedUsername) {
+  window.addEventListener('load', () => {
+    const el = document.getElementById('lobby-username');
+    if (el) el.value = savedUsername;
+  });
+}
+
 document.getElementById('btn-lobby-join').addEventListener('click', joinLobby);
 document.getElementById('lobby-password').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') joinLobby();
 });
+document.getElementById('lobby-username').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') joinLobby();
+});
 
 export async function joinLobby() {
-  const input   = document.getElementById('lobby-password').value.trim();
-  const errorEl = document.getElementById('lobby-error');
-  errorEl.style.display = 'none';
+  const password = document.getElementById('lobby-password').value.trim();
+  const username = document.getElementById('lobby-username').value.trim();
 
-  if (!input) { showLobbyError('Please enter a password.'); return; }
+  document.getElementById('lobby-error').style.display = 'none';
+
+  if (!password) { showLobbyError('Please enter a password.'); return; }
+  if (!username) { showLobbyError('Please enter a username.'); return; }
 
   const btn = document.getElementById('btn-lobby-join');
   btn.disabled = true;
@@ -33,22 +49,29 @@ export async function joinLobby() {
 
   const { data, error } = await supabase
     .from('lobbies')
-    .select('name, password, home_lat, home_lng')
-    .eq('password', input)
-    .single();
+    .select('*')
+    .eq('password', password)
+    .maybeSingle();
 
   btn.disabled = false;
   btn.textContent = 'Join lobby →';
 
-  if (error || !data) { showLobbyError('Wrong password. Try again.'); return; }
+  if (!data) { showLobbyError('Wrong password. Try again.'); return; }
+  if (error) { showLobbyError('Error joining lobby: ' + error.message); return; }
 
   currentLobby = {
-    name:     data.name,
-    password: data.password,
-    home_lat: data.home_lat,
-    home_lng: data.home_lng,
+    id:             data.id,
+    name:           data.name,
+    password:       data.password,
+    home_lat:       data.home_lat,
+    home_lng:       data.home_lng,
+    admin_token:    data.admin_token,
+    admin_password: data.admin_password,
+    username,
   };
+
   sessionStorage.setItem('geostickrs_lobby', JSON.stringify(currentLobby));
+  localStorage.setItem('geostickrs_username', username);
   window._enterApp?.();
 }
 
@@ -72,8 +95,10 @@ document.getElementById('btn-lobby-home').addEventListener('click', () => {
   const password = document.getElementById('lobby-new-password').value.trim();
   const errorEl  = document.getElementById('step-lobby-create-error');
 
-  if (!name)     { errorEl.textContent = 'Please enter a lobby name.';     errorEl.style.display = 'block'; return; }
-  if (!password) { errorEl.textContent = 'Please enter a lobby password.'; errorEl.style.display = 'block'; return; }
+  const adminPassword = document.getElementById('lobby-new-admin-password').value.trim();
+  if (!name)          { errorEl.textContent = 'Please enter a lobby name.';         errorEl.style.display = 'block'; return; }
+  if (!password)      { errorEl.textContent = 'Please enter a lobby password.';     errorEl.style.display = 'block'; return; }
+  if (!adminPassword) { errorEl.textContent = 'Please enter an admin password.';    errorEl.style.display = 'block'; return; }
   errorEl.style.display = 'none';
 
   // Show home picker
@@ -116,9 +141,10 @@ document.getElementById('btn-home-back').addEventListener('click', () => {
 });
 
 document.getElementById('btn-home-confirm').addEventListener('click', async () => {
-  const name     = document.getElementById('lobby-new-name').value.trim();
-  const password = document.getElementById('lobby-new-password').value.trim();
-  const btn      = document.getElementById('btn-home-confirm');
+  const name          = document.getElementById('lobby-new-name').value.trim();
+  const password      = document.getElementById('lobby-new-password').value.trim();
+  const adminPassword = document.getElementById('lobby-new-admin-password').value.trim();
+  const btn           = document.getElementById('btn-home-confirm');
 
   btn.disabled    = true;
   btn.textContent = 'Creating…';
@@ -139,12 +165,20 @@ document.getElementById('btn-home-confirm').addEventListener('click', async () =
     return;
   }
 
-  const { error } = await supabase.from('lobbies').insert([{
-    name,
-    password,
-    home_lat: selectedHomeLat,
-    home_lng: selectedHomeLng,
-  }]);
+    const adminToken = crypto.randomUUID();
+
+    const { data: createdLobby, error } = await supabase
+      .from('lobbies')
+      .insert([{
+        name,
+        password,
+        home_lat:       selectedHomeLat,
+        home_lng:       selectedHomeLng,
+        admin_token:    adminToken,
+        admin_password: adminPassword,
+      }])
+      .select('*')
+      .single();
 
   btn.disabled    = false;
   btn.textContent = 'Confirm home →';
@@ -154,8 +188,27 @@ document.getElementById('btn-home-confirm').addEventListener('click', async () =
   // Auto-join the new lobby
   document.getElementById('lobby-home-picker').style.display = 'none';
   document.getElementById('lobby-home-hint').style.display   = 'none';
-  currentLobby = { name, password, home_lat: selectedHomeLat, home_lng: selectedHomeLng };
+
+
+  currentLobby = {
+    id:             createdLobby.id,
+    name:           createdLobby.name,
+    password:       createdLobby.password,
+    home_lat:       createdLobby.home_lat,
+    home_lng:       createdLobby.home_lng,
+    admin_token:    createdLobby.admin_token,
+    admin_password: createdLobby.admin_password,
+  };
+
+  //currentAdminToken = adminToken;
+
   sessionStorage.setItem('geostickrs_lobby', JSON.stringify(currentLobby));
+  //localStorage.setItem(`geostickrs_admin_${createdLobby.id}`, adminToken);
+
+  localStorage.setItem(`geostickrs_admin_${currentLobby.name}`, adminToken);
+
+  alert('Lobby created! You are now the admin of this lobby.');
+
   window._enterApp?.();
 });
 
